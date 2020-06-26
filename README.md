@@ -43,3 +43,6 @@ ORM도 괜찮은 선택이긴 한데 거대한 레거시라는 공룡앞에서 �
 최종 목표는 JPA, queryDSL를 활용하는 것이다.
 
 커밍~ 쑨~
+
+# 진행 상황
+[개발전에 환경 잡고 가자](https://github.com/basquiat78/completedJPA/tree/1.enviroment)
