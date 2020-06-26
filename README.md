@@ -489,7 +489,7 @@ INFO: HHH10001008: Cleaning up connection pool [jdbc:mysql://localhost:3306/basq
 
 ```
 
-와 같이 콘솔에서 디비에 스키마 생성문이 날아가는 것을 본다면 환경설정은 끝이 난것이다.
+이와 같이 콘솔에서 디비에 스키마 생성문이 날아가는 것을 본다면 환경설정은 끝이 난것이다.
 
 
 # At A Glance
