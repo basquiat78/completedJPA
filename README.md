@@ -282,10 +282,10 @@ Hibernate:
 
 바로 이 옵션때문이었는데 지금 생각해도 등짝에 식은땀이 흐른다. 만일 이 친구가 실수로 운영쪽에다가 했으면 어떤 일이 벌어졌을까?
 
-create : SessionFactory 시작시 스키마, 즉 테이블을 삭제하고 다시 생성
-create-drop : SessionFactory 종료시 스키마 삭제
-update : SessionFactory 시작시 객체 구성와 스키마를 비교하여 컬럼 추가/삭제 작업을 진행함. 기존의 스키마를 삭제하지 않고 유지.
-validate : SessionFactory 시작시 객체구성과 스키마가 다르다면 예외 발생시킴.
+create : SessionFactory 시작시 스키마, 즉 테이블을 삭제하고 다시 생성    
+create-drop : SessionFactory 종료시 스키마 삭제    
+update : SessionFactory 시작시 객체 구성와 스키마를 비교하여 컬럼 추가/삭제 작업을 진행함. 기존의 스키마를 삭제하지 않고 유지.    
+validate : SessionFactory 시작시 객체구성과 스키마가 다르다면 예외 발생시킴.    
 
 
 옵션이 더 있었던거 같은데 그냥 다 알 필요없다. 저 위에꺼만 알고 가자.
