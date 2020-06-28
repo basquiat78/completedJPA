@@ -1,401 +1,8 @@
-# Prerequisites
+# Persistence Context
 
-## Configuration
-- macOS Catalina v10.15.5
-- OpenJDK(AdoptOpenJDK) 1.8.0.222
-- IDE: Spring Tool Suite version 3.9.9
-- Lombok Plugin
-- MySql 8.0.15
+일단 전 브랜치에서 봤던 코드를 다시 한번 살펴보자.
 
-사족: TMI이다.
-
-
-## Get Started
-일단 흐름은 메이븐프로젝트를 통해서 JPA의 기본적인 것들을 살펴보면서 진행할 것이다.
-
-책을 참조하면서 기본을 다시 다지고 있다보니 불편하지만 감수하고 있는데 사실 이건 최근 SpringBoot의 Spring Data JPA를 이용한 개발을 먼저 시작하신 분들에게는 좀 생소할 수 있다.
-
-왜냐하면 대부분 숨겨져 있기 때문이다.
-
-당연하게도 스프링부트의 탄생 배경을 보면 그럴것이다.
-
-개발을 빠르게 편하게 하는것이 목적인 만큼 JPA를 편하게 만들어 놓은 것이 Spring Data JPA니까
-
-하지만 이 공간은 JPA -> Spring Boot -> 최종적으로는 ~~criteria 잘가~~ queryDSL과 연계해서 하나의 작은 토이 프로젝트를 구성하는게 목적이니만큼 이 순서를 그대로 따를 것이다.
-
-그리고 이 프로젝트는 이미 깔아놨던 mySql이 있어서 그냥 썼지만 만일 그런 상황이 아니라면 굳이 무거운 이 녀석을 설치하지 말자. 
-
-메모리디비인 H2나 HSQLDB같은 작고 가벼운 녀석을 스탠드언론 형식으로 설치해서 사용하자.
-
-관련 설정 정보들은 구글신이 아주 잘 알려줄 것이다.
-
-
-## maven 설정  
-요즘은 gradle을 많이 써서 gradle을 쓰면 참 좋겠지만 난 maven이 좀 더 편하다. 
-
-xml 형식이 싫으면 gradle쓰고 아니라면 뭐가 되었든 로마로 가면 되는거 아닌가?
-
-지금까지 많은 프로젝트에서 둘다 써가면서 해봤는데 나의 경우에는 그냥 맞춰주는 성격이라 딱히 호불호를 따지진 않는다. 
-
-뭐 둘다 장단점이 있다.
-
-하지만 지금 이 프로젝트를 만든 시점에는 그냥 maven이 편해서 쓴다.
- 
-
-```
-
-<?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-	<modelVersion>4.0.0</modelVersion>
-	<groupId>io.basquiat</groupId>
-	<artifactId>completedJPA</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
-	
-	<properties>
-		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-		<java.version>1.8</java.version>
-		<maven.test.skip>true</maven.test.skip>
-	</properties>
-
-	<dependencies>
-		<dependency>
-			<groupId>org.hibernate</groupId>
-			<artifactId>hibernate-entitymanager</artifactId>
-			<version>5.4.17.Final</version>
-		</dependency>
-		
-		<dependency>
-			<groupId>mysql</groupId>
-			<artifactId>mysql-connector-java</artifactId>
-			<version>8.0.20</version>
-		</dependency>
-	
-		<dependency>
-			<groupId>org.apache.commons</groupId>
-			<artifactId>commons-lang3</artifactId>
-			<version>3.10</version>
-		</dependency>
-	
-		<dependency>
-			<groupId>org.projectlombok</groupId>
-			<artifactId>lombok</artifactId>
-			<version>1.18.12</version>
-			<scope>provided</scope>
-		</dependency>
-	
-		<dependency>
-			<groupId>org.junit.jupiter</groupId>
-			<artifactId>junit-jupiter-api</artifactId>
-			<version>5.6.2</version>
-			<scope>test</scope>
-		</dependency>
-	
-		<dependency>
-			<groupId>org.junit.jupiter</groupId>
-			<artifactId>junit-jupiter-engine</artifactId>
-			<version>5.6.2</version>
-			<scope>test</scope>
-		</dependency>
-	
-	</dependencies>
-
-</project>
-
-```
-
-이것이 현재 이 프로젝트의 maven설정이다. 5.4.17.Final를 선택한 이유는 차후 이 프로젝트가 SpringBoot 2.3.1버전을 사용해서 최종적으로 발전해 나갈 생각이기 때문이다. 
-
-따라서 기존에 테스트 했던 것들에 대해 버전 이슈없이 쓸수 있을 것이다라고 생각하고 진행한다.
-
-진행중에 스프링부트의 버전이 또 올라가더라도 2.3.1을 염두해 두고 진행한다.
-
-그리고 예전에도 2.1대 버전의 경우에는 queryDSL관련 라이브러리를 dependency에 걸었던거 같은데 이 후 버전에는 이 녀석들이 같이 딸려오는 듯 싶다.
-
-외국친구들도 비슷했던 모양인듯 이건 진행해보면서 확인할 생각이다.
-
-## 우리의 마이에스큐엘이 (Persistence영역)와 연애편지 쓰기  
-
-```
-<?xml version="1.0" encoding="UTF-8"?>
-<persistence version="2.2"
-             xmlns="http://xmlns.jcp.org/xml/ns/persistence" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-             xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/persistence http://xmlns.jcp.org/xml/ns/persistence/persistence_2_2.xsd">
-    <persistence-unit name="basquiat">
-        <properties>
-            <!-- database configuration -->
-            <property name="javax.persistence.jdbc.driver" value="com.mysql.jdbc.Driver"/>
-            <property name="javax.persistence.jdbc.user" value="basquiat"/>
-            <property name="javax.persistence.jdbc.password" value="basquiat"/>
-            <property name="javax.persistence.jdbc.url" value="jdbc:mysql://localhost:3306/basquiat?useUnicode=yes&amp;characterEncoding=UTF-8&amp;serverTimezone=Asia/Seoul"/>
-            <property name="hibernate.dialect" value="org.hibernate.dialect.MySQL5InnoDBDialect"/>
-            <!-- option configuration -->
-            <!-- 콘솔에 sql 날아가는거 보여줄지 여부를 체크하 옵션 -->
-            <property name="hibernate.show_sql" value="true"/>
-            <property name="hibernate.format_sql" value="true"/>
-            <property name="hibernate.use_sql_comments" value="true"/>
-            <!-- 이 옵션에 들어가는 것은 그냥 쓰지 말자. 테스트 용도 또는 개인 토이 프로젝트를 하는게 아니라면 validate정도까지만 그게 아니면 운영은 none으로 설정하자 -->
-            <!-- 실제 none이라는 옵션은 없다. 따라서 none으로 하면 아무 일도 일어나지 않는다. -->
-            <property name="hibernate.hbm2ddl.auto" value="create" />
-        </properties>
-    </persistence-unit>
-</persistence>
-
-```
-
-항상 오래전부터 SpringFramewokr를 쓸때마다 궁금했었지만 왜 설정 파일들을 특정 폴더에 넣어야 하는 것일까였다.
-
-관례라고 누군가는 말하는데 아무튼 우리의 어플리케이션(JPA)과 마이에스큐엘이와 '연결고리'를 만들기 위에서는 그와 관련된 설정파일이 필요하다.
-
-resources폴더밑에 [META-INF]폴더를 만들고 persistence.xml를 생성한 이후에 위와 같이 설정들을 기입하자.
-
-하이버네이트가 해당 폴더 밑에 persistence.xml를 읽어가기 때문에 이름도 고정이다. 또한 xml파일에 설정 내용중  persistence-unit name="basquiat" 이부분은 기억하자.
-
-name에 나는 basquiat라고 써놨는데 보통은 해당 프로젝트 이름을 넣는다.
-
-이 이름은 차후 EntityManagerFactory를 생성할 때 넣는 파라미터 값으로 이 이름을 찾기 때문이다. ~~에러나고 실행이 안되는데요? 하면서 은근히 모르는 사람 많더라...~~
-
-hibernate.dialect와 관련해서 dialect는 '방언'이라는 의미이다.
-
-경험이 많은 개발자들은 oracle과 mysql의 차이점을 잘 알것이다. 
-
-그외에도 얼마나 많은 RDBMS가 있는가? postgresql, sybase, mssql등등등..
-
-간단한 예로 paging처리하는 영역에서부터 일단 짜증이 확 몰려온다.
-
-```
-// offset, limit 활용 
-// 0(offset)번째 로우부터 10(limit)개를 가져온다.
-// LIMIT 10, 10;이라면 10째부터 10개 가져올게 라는 의미이다.
-mysql -> SELECT id,
-			   name,
-			   price 
-			FROM item 
-			LIMIT 0, 10; 
-
-// 그냥 primary key로 정렬되서 조회된 정보에서 몇개만 가져오겠다면 limit만 걸어서 
-// 이 경우는 조회된 결과에서 10개만 가져온다.
-mysql -> SELECT id,
-			   name,
-			   price 
-			FROM item 
-			LIMIT 10; 
-
-// 하지만 오라클 이 xx넘은 좀 다르다.
-oracle -> SELECT ITEM.id,
-			    ITEM.name,
-			    ITEM.price
-			FROM (SELECT id,
-						name,
-						price 
-					FROM item
-				 ) ITEM 
-		 WHERE rownum <= 10
-
-```
-오라클의 페이징을 보자니 벌써부터 머리가...
-
-게다가 오라클도 안써본지 너무 오래됬넹...
-
-아무튼 persistence.xml은 어떤 RDBMS와 연결할 것인지에 대한 정보를 하이버네이트에게 알려주는 일종의 명세서라고 보면 된다. 
-
-즉, JPA에서는 이 명세서를 보고 '내가 바라볼 DB와 관련 정보들이 뭐시기이니 그에 맞춰서 쿼리를 만들어줘야겠다' 생각할 것이다.
-
-이 말인 즉 이제부터 우리는 JPA와 JPA가 지원해주는 RDBMS와 함께라면 행복해 질 수 있는것이다.
-
-그럼 이제 persistence.xml 밑에 걸어둔 옵션들은 뭐하는 녀석들인지 살펴보자. ~~TMI~~
-
-
-```
-1. <property name="hibernate.show_sql" value="true"/>
-
-이렇게 true를 하게 되면 어떤 쿼리가 날아갔는지 알 수있다.
-하지만 쿼리가 길어진다면 가독성이 상당히 떨어지게 된다.
-
-Hibernate: drop table if exists basquiat_item
-Hibernate: create table basquiat_item (id bigint not null auto_increment, name varchar(255), price integer, primary key (id)) engine=InnoDB
-Hibernate: insert into basquiat_item (name, price) values (?, ?)
-   
-   
-2. <property name="hibernate.format_sql" value="true"/>
-그래서 이녀석이 존재한다.
-보면 알겠지만 흔히 사용하는 sql 작성 권장 형식으로 변경된다.
-
-Hibernate: 
-    
-    drop table if exists basquiat_item
-Hibernate: 
-    
-    create table basquiat_item (
-       id bigint not null auto_increment,
-        name varchar(255),
-        price integer,
-        primary key (id)
-    ) engine=InnoDB
-Hibernate: 
-    insert 
-    into
-        basquiat_item
-        (name, price) 
-    values
-        (?, ?)
-
-
-3. <property name="hibernate.use_sql_comments" value="true"/>
-그럼 이녀석은 뭐하는 녀석인고??
-위와 다른 점은 CRUD중 CUD, 즉 insert, update, delete가 발생할 때 알 수 있는데 보면 알겠지만 
-
-/* insert io.basquiat.model.Item
-        */
-        
-위처럼 INSERT할때 어떤 객체의 정보가 넘어갔는지 힌트 형식으로 보여주게 된다.
-
-Hibernate: 
-    
-    drop table if exists basquiat_item
-Hibernate: 
-    
-    create table basquiat_item (
-       id bigint not null auto_increment,
-        name varchar(255),
-        price integer,
-        primary key (id)
-    ) engine=InnoDB
-Hibernate: 
-    /* insert io.basquiat.model.Item
-        */ insert 
-        into
-            basquiat_item
-            (name, price) 
-        values
-            (?, ?)
-
-```
-
-그렇다면 hibernate.hbm2ddl.auto 옵션은 뭘까? ~~위험한 넘인건 확실하다~~
-
-예전 초창기 jpa프로젝트 할때 에피소드가 있었는데 그것은 한 동료가 계속 나에게 이상한 버그가 있다고 하는 것이다.
-
-그것은 자신이 테스트했던 데이터들이 서버를 재실행 할테마다 다 사라진다는 것이다. 
-
-바로 이 옵션때문이었는데 지금 생각해도 등짝에 식은땀이 흐른다. 만일 이 친구가 실수로 운영쪽에다가 했으면 어떤 일이 벌어졌을까?
-
-create : SessionFactory 시작시 스키마, 즉 테이블을 삭제하고 다시 생성    
-create-drop : SessionFactory 종료시 스키마 삭제    
-update : SessionFactory 시작시 객체 구성와 스키마를 비교하여 컬럼 추가/삭제 작업을 진행함. 기존의 스키마를 삭제하지 않고 유지.    
-validate : SessionFactory 시작시 객체구성과 스키마가 다르다면 예외 발생시킴.    
-
-
-옵션이 더 있었던거 같은데 그냥 다 알 필요없다. 저 위에꺼만 알고 가자.
-
-설명에도 잘 나와있듯이 create붙은 녀석은 엄청 무서운 녀석이다. 그냥 묻지도 따지지도 않고 테이블을 삭제해 버린다.
-
-그냥 가볍게 테스트하면서 지우고 다시 생성하고 하면 그 무엇보다 세상 편한 녀석이긴 하지만 세상 가장 무서운 녀석인 이중적인 녀석이다.
-
-테스트에서는 내가 굳이 DDL을 생성할 필요가 없기 때문인데 하지만 실제 DB를 설계하다보면 이 녀석만으로는 부족한 부분이 많다.
-
-필요한 인덱스는 따로 만줘져야 하고 운영상태로 넘어가면 이미 스키마는 만들어진 상태일 것이다.
-
-update도 매력적이긴 한데 이게 문제가 될 소지가 있다.
-
-
-JPA와 관련된 건 아니지만 경험을 하나 말해보자면, 이 커머스 업체들 디비를 보면 가장 많은 데이터를 가진 테이블이 아마도 주문, 상품, 클레임 쪽일 확률이 높다.
-당연하겠지만 그러한데 지금 있는 회사에서는 테스트/스테이징 서버의 DB는 주기적으로 운영DB를 레플리카한다. 실제로 쌓이는 데이터이다.
-
-
-어느날 요청에 의해 NodeJS로 상상의 비즈니스 로직을 짜고 테스트 디비에 컬럼 하나를 추가하는 Alter를 날렸다 10분이라는 시간동안 해당 테이블에 락이 걸려 아무것도 하지 못했던 일이 있었다. 그때 그 테이블 바라보고 작업하던 후배 동료분께서는 나에게 엄청나게 따가운 눈초리를 보냈다. 
-
-결국 걸린 락 아이디를 찾아서 kill을 해야만 했다.
-
-
-이게 무슨 말이냐면 update라는 옵션이 '기존의 스키마를 삭제하지 않고 유지'한다고 하지만 만일 해당 Entity 객체에 정말 가벼운 마음으로 변수 하나 추가했다가 해당 테이블에 락이 걸려버리게 되면 관련 서비스는 그 락이 풀릴때까지 멈추게 되는 것이다. 언제 풀릴지도 미지수....
-
-만일 그 테이블이 주문쪽이라면?? 
-
-사용자들은 주문이 안된다고 Q&A에 엄청난 분노를 남기게 되는 현상이 발생할 것이다..... ~~끔찍해~~
-
-
-다만 좀 유의미한건 validate이다.
-
-컬럼이 빠지거나 새로 생기면서 벌어질 수 있는 휴먼 에러를 바로 알아챌 수 있기 때문이다. 
-
-# 이제 개발할 환경이 갖춰졌는지 확인해 볼 시간  
-
-이 브랜치는 Persistance Context(영속성 컨텍스트)나 이런 것들을 알아보기 전에 환경이 갖춰졌는지 확인만 할 생각이다.
-
-나는 일단 Item과 jpaMain을 하나 만들고 다음과 같이 코드를 짰다.
-
-
-Item.java
-
-```
-package io.basquiat.model;
-
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-
-import org.apache.commons.lang3.StringUtils;
-
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-
-/**
- * 
- * created by basquiat
- *
- */
-@Entity(name = "basquiat_item")
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Item {
-
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
-
-	@Setter
-	@Getter
-	private String name;
-
-	@Setter
-	@Getter
-	private Integer price;
-	
-	@Builder
-	public Item(String name, Integer price) {
-		/*
-		 * 스프링을 사용하는 것이 아니라서 현재는 commons-lang3의 StringUtils를 사용해서 IllegalArgumentException를 던진다.
-		 * 사실 스프링을 사용하게 되면 Assert를 이용해서 DB영역이 아닌 어플리케이션 영역에서 에러를 뱉어내게 하는게 주 목적이고
-		 * 이렇게 함으로써 에러캐치를 빠르게 잡아서 대응하고 개발자의 실수를 줄인다.
-		 * 번거롭지만 실제로 이렇게 하는 것이 차후에는 정신적으로 편해진다.
-		 */
-		if(StringUtils.isBlank(name)) {
-			throw new IllegalArgumentException("item name must be not null"); 
-	    }
-		if(price == null || price < 0) {
-			throw new IllegalArgumentException("price must be not under 0"); 
-	    }
-		
-		this.price = price;
-		this.name = name;
-	}
-
-	@Override
-	public String toString() {
-		return "Item [id=" + id + ", name=" + name + ", price=" + price + "]";
-	}
-	
-}
-
-
-```
-
+지루한 내용이 될것이다.
 
 ```
 
@@ -414,16 +21,9 @@ import javax.persistence.Persistence;
 public class jpaMain {
 
     public static void main(String[] args) {
-
-    	// persistence.xml에 등록된 <persistence-unit name="basquiat">의 name값으로
-    	// EntityManagerFactory를 생성하자. 
-    	// Factory라는 말이 붙은 것을 보면 Factory Pattern이 적용된것이다. TMI적이고~ 
         EntityManagerFactory emf = Persistence.createEntityManagerFactory("basquiat");
-        // EntityManger를 emf로부터 꺼내오자.
         EntityManager em = emf.createEntityManager();
-        // 이제부터 트랜잭션 관리하기 위해서 EntityTransaction을 생성하자.
         EntityTransaction tx = em.getTransaction();
-        // transaction!!!!
         tx.begin();
         try {
 
@@ -438,68 +38,817 @@ public class jpaMain {
     
 }
 
-```
-
-일단 Transaction관련 내용은 구글에서 검색해서 괜찮다 싶은거 하나 그냥 링크로 던지고 말자.
-
-[[DB기초] 트랜잭션이란 무엇인가?](https://coding-factory.tistory.com/226)
-
-
-이제 저것을 실행해서 
 
 ```
-Jun 26, 2020 4:01:16 PM org.hibernate.jpa.internal.util.LogHelper logPersistenceUnitInformation
-INFO: HHH000204: Processing PersistenceUnitInfo [name: basquiat]
-Jun 26, 2020 4:01:17 PM org.hibernate.Version logVersion
-INFO: HHH000412: Hibernate ORM core version 5.4.17.Final
-Jun 26, 2020 4:01:17 PM org.hibernate.annotations.common.reflection.java.JavaReflectionManager <clinit>
-INFO: HCANN000001: Hibernate Commons Annotations {5.1.0.Final}
-Jun 26, 2020 4:01:17 PM org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl configure
-WARN: HHH10001002: Using Hibernate built-in connection pool (not for production use!)
-Loading class `com.mysql.jdbc.Driver'. This is deprecated. The new driver class is `com.mysql.cj.jdbc.Driver'. The driver is automatically registered via the SPI and manual loading of the driver class is generally unnecessary.
-Jun 26, 2020 4:01:17 PM org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl buildCreator
-INFO: HHH10001005: using driver [com.mysql.jdbc.Driver] at URL [jdbc:mysql://localhost:3306/basquiat?useUnicode=yes&characterEncoding=UTF-8&serverTimezone=Asia/Seoul]
-Jun 26, 2020 4:01:17 PM org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl buildCreator
-INFO: HHH10001001: Connection properties: {user=basquiat, password=****}
-Jun 26, 2020 4:01:17 PM org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl buildCreator
-INFO: HHH10001003: Autocommit mode: false
-Jun 26, 2020 4:01:17 PM org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl$PooledConnections <init>
-INFO: HHH000115: Hibernate connection pool size: 20 (min=1)
-Jun 26, 2020 4:01:17 PM org.hibernate.dialect.Dialect <init>
-INFO: HHH000400: Using dialect: org.hibernate.dialect.MySQL5InnoDBDialect
-Hibernate: 
+
+아마도 SpringBoot를 활용해 개발하거나 접한 분들이라면 저런 코드를 본적이 없을 것이다. 
+
+try catch로 묶고 사용한 자원들을 close하는 코드가 낯설 수도 있다.
+
+앞서 말했듯이 그 모든 것을 스프링이 대처해주기 때문인데 그럼에도 한번쯤은 짚고 넘어가야 하는 부분이다.
+
+앞에서 DB와 관련된 링크를 통해 트랜잭션이란 것이 무엇인지 봤을 것이다.
+
+트랜잭션이라는 것은 하나의 어떤 일렬의 작업의 묶음이라고 봐도 무방하다. 결국 트랜잭션을 가져와서 시작하고 커밋을 날리기 전까지의 어떤 작업들은 하나의 트랜잭션으로 묶이게 된다.
+
+에러가 나면 롤백을 수행하기도 한다.
+
+저 위의 코드는 과거 preparedStatement의 코드와 비슷한 면이 있다. 
+
+커넥션을 맺고 preparedStatement를 통해 DB와 do something을 하고 사용한 리소스를 반환하기 위해서 close를 하는 코드를 본적이 있을지 모르겠지만...
+
+```
+
+try {
+    Connection conn = null;
+    PreparedStatement pstmt = null;
+     
+    String sql = "INSERT item (name, price) VALUES(?, ?)";
+     
+    conn = DriverManager.getConnection("jdbc:url, user, password);
+    pstmt = conn.prepareStatement(sql);
+     
+    pstmt.setString(1, name);
+    pstmt.setInt(2, price);
+    pstmt.execute(sql);
+    stmt.close();
+    conn.close();
+} catch(Exception e) {
+    e.printStackTrace();
+}
+
+```
+
+대충 이런 느낌인데 비슷하지 않은가?
+
+어쨰든 jpa코드로 돌아가서 코드를 그림으로 표현을 해보자면 
+
+![실행이미지](https://github.com/basquiat78/java-oop/blob/master/img/capture1.PNG)
+
+어디서 많이 본 그림이지?
+
+그럼 이제 Persistence Context, 즉 영속성 컨텍스트라는 것은 무엇인가이다.
+
+아는 분들은 아실 수 있겠지만 일반적으로 myBatis같은 녀석을 쓰게 되면 DB에 무언가를 실행하는 순간 그것으로 끝이다.
+
+특히 xml에 객체와 매핑을 하고 그것을 실제로 짜놓은 sql과 연계해서 무언가를 하는 것이 아니고 바로 실행을 해버린다는 것이다.
+
+하지만 JPA의 경우에는 그 흐름이 다르다.
+
+책에서는 이와 관련해서 '엔티티를 영구 저장하는 환경'이라는 표현을 쓴다.
+
+또한 논리적인 개념으로 논리적인 공간을 의미하고 EntitiyManger를 통해서 이 공간에 접근한다고 표현한다.
+
+일단 말이 어렵고 이것이 무엇인가는 우리같은 개발자는 코드로 직접 보는것이 최고이다.
+
+
+```
+
+package io.basquiat;
+
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.EntityTransaction;
+import javax.persistence.Persistence;
+
+import io.basquiat.model.Item;
+
+/**
+ * 
+ * created by basquiat
+ *
+ */
+public class jpaMain {
+
+    public static void main(String[] args) {
+
+        EntityManagerFactory emf = Persistence.createEntityManagerFactory("basquiat");
+        EntityManager em = emf.createEntityManager();
+        EntityTransaction tx = em.getTransaction();
+        tx.begin();
+        try {
+
+        	Item item = Item.builder().name("Sandberg California II TT5 Masterpiece")
+        							  .price(5400000).build();
+        	
+        	tx.commit();
+        } catch(Exception e) {
+            tx.rollback();
+        } finally {
+            em.close();
+        }
+        emf.close();
+    }
     
-    drop table if exists basquiat_item
-Jun 26, 2020 4:01:18 PM org.hibernate.resource.transaction.backend.jdbc.internal.DdlTransactionIsolatorNonJtaImpl getIsolatedConnection
-INFO: HHH10001501: Connection obtained from JdbcConnectionAccess [org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator$ConnectionProviderJdbcConnectionAccess@1c05a54d] for (non-JTA) DDL execution was not in auto-commit mode; the Connection 'local transaction' will be committed and the Connection will be set into auto-commit mode.
-Hibernate: 
-    
-    create table basquiat_item (
-       id bigint not null auto_increment,
-        name varchar(255),
-        price integer,
-        primary key (id)
-    ) engine=InnoDB
-Jun 26, 2020 4:01:18 PM org.hibernate.resource.transaction.backend.jdbc.internal.DdlTransactionIsolatorNonJtaImpl getIsolatedConnection
-INFO: HHH10001501: Connection obtained from JdbcConnectionAccess [org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator$ConnectionProviderJdbcConnectionAccess@e27ba81] for (non-JTA) DDL execution was not in auto-commit mode; the Connection 'local transaction' will be committed and the Connection will be set into auto-commit mode.
-Jun 26, 2020 4:01:18 PM org.hibernate.engine.transaction.jta.platform.internal.JtaPlatformInitiator initiateService
-INFO: HHH000490: Using JtaPlatform implementation: [org.hibernate.engine.transaction.jta.platform.internal.NoJtaPlatform]
-Jun 26, 2020 4:01:18 PM org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl$PoolState stop
-INFO: HHH10001008: Cleaning up connection pool [jdbc:mysql://localhost:3306/basquiat?useUnicode=yes&characterEncoding=UTF-8&serverTimezone=Asia/Seoul]
+}
 
 ```
 
-이와 같이 콘솔에서 디비에 스키마 생성문이 날아가는 것을 본다면 환경설정은 끝이 난것이다.
+위와 같이 코드를 짜고 실행하게 되면 어떤 일이 벌어질까?
+
+아무일도 일어나지 않는다. 아! persistence.xml에 hibernate.hbm2ddl.auto옵션을 create로 해놨다면 스키마를 드롭하고 다시 생성하는 쿼리 정도만 볼 수 있다.
+
+왜 그럴까? 생성한 객체는 @Entity를 붙여놨는데? 이거면 되는거 아니었엉?
+
+하지만 사실 Item은 단지 객체만 생성된 것 뿐이다.
+
+이것을 이해하기 위해서는 Entity의 life cycle을 알아야 한다.
 
 
-# At A Glance
+1. 비영속 (new/transient)
+영속성 컨텍스트와 전혀 관계가 없는 상태
 
-가끔 후배 동료분들과 얘기해 보면 JPA가 db를 몰라도 되는 마치 '마법의 단어'로 알고 있는 경우가 많다.
+2. 영속(managed)
+영속성 컨텍스트에 저장된 상태를 의미한다. 즉, 엔티티가 영속성 컨텍스트에 의해 관리되어진다는 것이다.
+그렇다고 DB에 곧바로 쿼리가 날라가지 않는다.
+트랜잭션의 커밋 시점에 영속성 컨텍스트에 있는 정보들이 DB에 쿼리로 날라간다.
 
-절대 아니다. 
+3. 준영속(detached)
+영속성 컨텍스트에 저장되었다가 분리된 상태를 의미한다.
 
-애초에 JPA는 데이터베이스라는 기술위에서 살고 있는 녀석이기 때문에 최소한의 DB에 대한 기초와 SQL를 간지나게 작성하지 못해도 특징 정도는 알아야 한다는 것이다.
+4. 삭제(removed)
+삭제된 상태이다. 이 경우네는 DB에서도 날린다.
 
-트랜잭션이라는 것도 마찬가지이다.
 
-뭐 어째든 시작은 했으니 벌써 반은 온거야?
+
+그러면 지금 위에 코드의 Item은 논리적인 영역인 영속성 컨텍스트와는 상관없는 비영속 상태라는 것이다.
+이젠 저 객체를 영속 상태로 만들어 보자.
+
+```
+
+package io.basquiat;
+
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.EntityTransaction;
+import javax.persistence.Persistence;
+
+import io.basquiat.model.Item;
+
+/**
+ * 
+ * created by basquiat
+ *
+ */
+public class jpaMain {
+
+    public static void main(String[] args) {
+
+        EntityManagerFactory emf = Persistence.createEntityManagerFactory("basquiat");
+        EntityManager em = emf.createEntityManager();
+        EntityTransaction tx = em.getTransaction();
+        tx.begin();
+        try {
+
+        	Item item = Item.builder().name("Sandberg California II TT5 Masterpiece")
+        							  .price(5400000).build();
+        	em.persist(item);
+        	tx.commit();
+        } catch(Exception e) {
+            tx.rollback();
+        } finally {
+            em.close();
+        }
+        emf.close();
+    }
+    
+}
+
+```
+
+em.perisist(item)이라는 코드 한 줄로 우리는 이제 item이라는 객체를 영속성 컨텍스트가 관리하는 영속 상태로 만들었다.
+
+눈치 빠른 분들이나 이미 아는 분들이라면 tx.commit()이 실행되는 순간 인서트 쿼리가 날아갈 것이라는 것을 알 수 있다.
+
+EntityTransaction 내부를 따라가다보면 AbstractSharedSessionContract를 만나게 되는데 결국 이녀석은 jdbc를 통해 commit를 날리게 된다.
+
+하지만 영속성 상태로 만들었다 해서 바로 쿼리로 날아가서 디비에 데이터가 꽂히는 것은 아니다.
+
+```
+package io.basquiat;
+
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.EntityTransaction;
+import javax.persistence.Persistence;
+
+import io.basquiat.model.Item;
+
+/**
+ * 
+ * created by basquiat
+ *
+ */
+public class jpaMain {
+
+    public static void main(String[] args) {
+        EntityManagerFactory emf = Persistence.createEntityManagerFactory("basquiat");
+        EntityManager em = emf.createEntityManager();
+        EntityTransaction tx = em.getTransaction();
+        tx.begin();
+        try {
+        	Item item = Item.builder().name("Fodera Emperor5 Elite")
+        							  .price(14000000).build();
+        	
+        	System.out.println("영속성 상태로 만들면 바로 쿼리로 날아가는거 아니였엉??");
+        	em.persist(item);
+        	System.out.println("영속성 상태로 만들고 나면 날아가는 거였엉????");
+        	tx.commit();
+        } catch(Exception e) {
+            tx.rollback();
+        } finally {
+            em.close();
+        }
+        emf.close();
+    }
+    
+}
+
+
+```
+
+하지만 지금 내가 만들어 논 경우에는 우리가 예상하는 것과는 다른 결과를 보게 될 것이다.
+
+```
+
+영속성 상태로 만들면 바로 쿼리로 날아가는거 아니였엉??
+Hibernate: 
+    /* insert io.basquiat.model.Item
+        */ insert 
+        into
+            basquiat_item
+            (name, price) 
+        values
+            (?, ?)
+영속성 상태로 만들고 나면 날아가는 거였엉????
+
+
+```
+
+위에 언급했던 말대로라면 사실 밑의 결과를 예상했을 것이다.
+
+
+```
+
+영속성 상태로 만들면 바로 쿼리로 날아가는거 아니였엉??
+영속성 상태로 만들고 나면 날아가는 거였엉????
+Hibernate: 
+    /* insert io.basquiat.model.Item
+        */ insert 
+        into
+            basquiat_item
+            (name, price) 
+        values
+            (?, ?)
+
+```
+
+알고 있는 지식으로는 tx.commit()이 실행될 때 내부적으로 영속성 컨텍스트에 있는 정보를 flush()를 하게 되고 이때 쿼리가 날아간다. 
+
+그리고 commit를 치게 되는데 지금 상황은 무엇인가??
+
+의문이 들것이다. 이것은 사실 Item의 id의 기본 키 매핑 전략중 @GeneratedValue(strategy = GenerationType.IDENTITY)를 사용했기 때문이다.
+
+이와 관련된 궁금증은 이후에 알아 볼것이다.
+
+
+만일 사실 여부를 알고 싶다면
+
+OtherItem.java
+
+```
+package io.basquiat.model;
+
+import javax.persistence.Entity;
+import javax.persistence.Id;
+
+import org.apache.commons.lang3.StringUtils;
+
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
+
+/**
+ * 
+ * created by basquiat
+ *
+ */
+@Entity(name = "basquiat_other_item")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@ToString
+public class OtherItem {
+
+	@Id
+	private Long id;
+
+	@Setter
+	@Getter
+	private String name;
+
+	@Setter
+	@Getter
+	private Integer price;
+	
+	@Builder
+	public OtherItem(Long id, String name, Integer price) {
+		if(StringUtils.isBlank(name)) {
+			throw new IllegalArgumentException("item name must be not null"); 
+	    }
+		if(price == null || price < 0) {
+			throw new IllegalArgumentException("price must be not under 0"); 
+	    }
+		
+		this.id = id;
+		this.price = price;
+		this.name = name;
+	}
+	
+}
+
+
+```
+
+```
+
+package io.basquiat;
+
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.EntityTransaction;
+import javax.persistence.Persistence;
+
+import io.basquiat.model.Item;
+import io.basquiat.model.OtherItem;
+
+/**
+ * 
+ * created by basquiat
+ *
+ */
+public class jpaMain {
+
+    public static void main(String[] args) {
+        EntityManagerFactory emf = Persistence.createEntityManagerFactory("basquiat");
+        EntityManager em = emf.createEntityManager();
+        EntityTransaction tx = em.getTransaction();
+        tx.begin();
+        try {
+        	//Item item = Item.builder().name("Fodera Emperor5 Elite")
+        	//						  .price(14000000).build();
+        	
+        	OtherItem item = OtherItem.builder().id(1L)
+        										.name("Fender Custom Shop 63 Precision")
+        										.price(5400000)
+        										.build();
+        	
+        	System.out.println("영속성 상태로 만들면 바로 쿼리로 날아가는거 아니였엉??");
+        	em.persist(item);
+        	System.out.println("영속성 상태로 만들고 나서 커밋을 만날 때 날아가는 거였엉????");
+        	tx.commit();
+        } catch(Exception e) {
+            tx.rollback();
+        } finally {
+            em.close();
+        }
+        emf.close();
+    }
+    
+}
+
+
+```
+
+이렇게 하면 원하는 결과를 얻을 수 있다.
+
+
+em.persist(item)라는 코드외에도 영속 상태로 만드는 또 다른 케이스는 셀렉트를 했을 경우이다.
+
+예를 들면 다음 코드를 살펴보자.
+
+```
+package io.basquiat;
+
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.EntityTransaction;
+import javax.persistence.Persistence;
+
+import io.basquiat.model.Item;
+
+/**
+ * 
+ * created by basquiat
+ *
+ */
+public class jpaMain {
+
+    public static void main(String[] args) {
+        EntityManagerFactory emf = Persistence.createEntityManagerFactory("basquiat");
+        EntityManager em = emf.createEntityManager();
+        EntityTransaction tx = em.getTransaction();
+        tx.begin();
+        try {
+        	
+        	Item item = em.find(Item.class, 1L);
+        	System.out.println(item.toString());
+        
+         // 똑같은 녀석을 또 한번 검색을 한다.
+        	Item item1 = em.find(Item.class, 1L); 
+        	System.out.println(item1.toString());
+        	tx.commit();
+        } catch(Exception e) {
+            tx.rollback();
+        } finally {
+            em.close();
+        }
+        emf.close();
+    }
+    
+}
+
+```
+
+다음과 같이 코드를 실행하게 되면 이런 결과를 얻게 된다.
+
+```
+Hibernate: 
+    select
+        item0_.id as id1_0_0_,
+        item0_.name as name2_0_0_,
+        item0_.price as price3_0_0_ 
+    from
+        basquiat_item item0_ 
+    where
+        item0_.id=?
+Item [id=1, name=Fodera Emperor5 Elite, price=14000000]
+Item [id=1, name=Fodera Emperor5 Elite, price=14000000]
+
+```
+
+셀렉트 쿼리는 단 한번만 날아갔다. 하지만 item1의 정보도 함께 뿌려주게 된다. 
+
+myBatis나 다른 방식이라면 쿼리가 두번 날아갈것이다. 
+
+하지만 JPA는 셀렉트한 정보를 영속성 컨텍스트에 캐시 (여기서는 1차 캐시라며 표현함)로 담아놓게 된다.
+
+그리고 두 번째 같은 id값이 1로 검색했을 때 JPA는 쿼리를 바로 날리는 것이 아니라 영속성 컨텍스트의 1차 캐시에서 한번 조회를 해보고 없으면 그때 쿼리를 날리게 된다.
+
+그럼 과연 그럴까?
+
+
+TMI: 일단 jpa가 처음이신 분이라면 앞에서 데이터를 하나 집어넣고 persistence.xml의 hibernate.hbm2ddl.auto옵션을 none으로 두자. 그래야 데이터를 조회할 수 있기 때문이다.
+
+
+```
+package io.basquiat;
+
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.EntityTransaction;
+import javax.persistence.Persistence;
+
+import io.basquiat.model.Item;
+
+/**
+ * 
+ * created by basquiat
+ *
+ */
+public class jpaMain {
+
+    public static void main(String[] args) {
+        EntityManagerFactory emf = Persistence.createEntityManagerFactory("basquiat");
+        EntityManager em = emf.createEntityManager();
+        EntityTransaction tx = em.getTransaction();
+        tx.begin();
+        try {
+        	
+        	Item item = em.find(Item.class, 1L);
+        	System.out.println(item.toString());
+        
+        	Item item1 = em.find(Item.class, 1L);
+        	System.out.println(item1.toString());
+        	
+        	Item item2 = em.find(Item.class, 2L);
+        	System.out.println(item2.toString());
+        	tx.commit();
+        } catch(Exception e) {
+            tx.rollback();
+        } finally {
+            em.close();
+        }
+        emf.close();
+    }
+    
+}
+
+
+```
+
+다음과 같이 코드를 실행하게 되면 
+
+```
+Hibernate: 
+    select
+        item0_.id as id1_0_0_,
+        item0_.name as name2_0_0_,
+        item0_.price as price3_0_0_ 
+    from
+        basquiat_item item0_ 
+    where
+        item0_.id=?
+Item [id=1, name=Fodera Emperor5 Elite, price=14000000]
+Item [id=1, name=Fodera Emperor5 Elite, price=14000000]
+Hibernate: 
+    select
+        item0_.id as id1_0_0_,
+        item0_.name as name2_0_0_,
+        item0_.price as price3_0_0_ 
+    from
+        basquiat_item item0_ 
+    where
+        item0_.id=?
+
+```
+
+![실행이미지](https://github.com/basquiat78/java-oop/blob/master/img/capture2.PNG)
+
+id값이 1인 녀석을 2번 조회하고 2인 녀석을 한번 조회하는 코드를 실행하게 되면 맨 처음 DB에서 조회하고 영속성 컨텍스트의 1차 캐시에 저장하고 출력하게 되고 그 다음에 한번 더 조회하면 영속성 컨텍스트의 1차 캐시을 우선적으로 조회한다. 앞서 저장된 아이디 1이 존재하기에 쿼리를 날리지 않고 캐시에서 가져와 출력하고 그 다음 코드는 아이디가 2인 녀석을 조회하는데 1차 캐시에 없기 때문에 쿼리를 날려서 가져오게 된다.
+
+그렇다면 준영속이라는 것은 무엇일까?
+설명에 의하면 '영속성 컨텍스트에 저장되었다가 분리된 상태를 의미한다'라고 말하고 있다.
+
+결국 영속성 컨텍스트의 기능을 사용할 수 없다는 의미이다.
+
+1. em.detach(entitiy)를 통해서 준영속상태로 만든다.
+
+```
+package io.basquiat;
+
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.EntityTransaction;
+import javax.persistence.Persistence;
+
+import io.basquiat.model.Item;
+
+/**
+ * 
+ * created by basquiat
+ *
+ */
+public class jpaMain {
+
+    public static void main(String[] args) {
+        EntityManagerFactory emf = Persistence.createEntityManagerFactory("basquiat");
+        EntityManager em = emf.createEntityManager();
+        EntityTransaction tx = em.getTransaction();
+        tx.begin();
+        try {
+        	
+        	Item item = em.find(Item.class, 1L);
+        	System.out.println(item.toString());
+        
+        	// 첫번재 엔티티를 detach한다.
+        	em.detach(item);
+        	
+        	Item item1 = em.find(Item.class, 1L);
+        	System.out.println(item1.toString());
+        	
+        	Item item2 = em.find(Item.class, 2L);
+        	System.out.println(item2.toString());
+        	tx.commit();
+        } catch(Exception e) {
+            tx.rollback();
+        } finally {
+            em.close();
+        }
+        emf.close();
+    }
+    
+}
+
+```
+
+지금까지 따라왔다면 저 위의 결과는 예상이 될것이다.
+
+```
+Hibernate: 
+    select
+        item0_.id as id1_0_0_,
+        item0_.name as name2_0_0_,
+        item0_.price as price3_0_0_ 
+    from
+        basquiat_item item0_ 
+    where
+        item0_.id=?
+Item [id=1, name=Fodera Emperor5 Elite, price=14000000]
+Hibernate: 
+    select
+        item0_.id as id1_0_0_,
+        item0_.name as name2_0_0_,
+        item0_.price as price3_0_0_ 
+    from
+        basquiat_item item0_ 
+    where
+        item0_.id=?
+Item [id=1, name=Fodera Emperor5 Elite, price=14000000]
+Hibernate: 
+    select
+        item0_.id as id1_0_0_,
+        item0_.name as name2_0_0_,
+        item0_.price as price3_0_0_ 
+    from
+        basquiat_item item0_ 
+    where
+        item0_.id=?
+```
+
+첫번째 아이디가 1인 녀석을 조회하면 jpa는 1차 캐시를 조회하고 없으면 DB를 조회해서 데이터를 가져오고 해당 엔티티를 1차 캐시에 세팅한다고 했다.
+근데 그러고 나서 엔티티를 영속성 상태에서 em.detach를 통해 분리했기 때문에 2번째 똑같은 아이이 1을 조회했을 때는 영속성 컨텍스트의 1차 캐시에 조회를 해도 이미 분리되서 사라졌기때문에 다시 쿼리를 날리게 된다.
+
+준영속 상태로 만드는 방법은 em.clear()를 통해서 전부 초기화를 하게 된다.
+
+예를 들면 디비에 2개의 데이터가 있다고 가정을 해보자. 
+
+```
+package io.basquiat;
+
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.EntityTransaction;
+import javax.persistence.Persistence;
+
+import io.basquiat.model.Item;
+
+/**
+ * 
+ * created by basquiat
+ *
+ */
+public class jpaMain {
+
+    public static void main(String[] args) {
+        EntityManagerFactory emf = Persistence.createEntityManagerFactory("basquiat");
+        EntityManager em = emf.createEntityManager();
+        EntityTransaction tx = em.getTransaction();
+        tx.begin();
+        try {
+        	
+        	Item item1 = em.find(Item.class, 1L);
+        	Item item2 = em.find(Item.class, 2L);
+        	System.out.println(item1.toString());
+        	System.out.println(item2.toString());
+        	em.clear();
+        	Item item3 = em.find(Item.class, 1L);
+        	Item item4 = em.find(Item.class, 2L);
+        	System.out.println(item3.toString());
+        	System.out.println(item4.toString());
+        	
+        	tx.commit();
+        } catch(Exception e) {
+            tx.rollback();
+        } finally {
+            em.close();
+        }
+        emf.close();
+    }
+    
+}
+
+```
+다음과 같은 결과를 예상할 수 있다.
+
+```
+Hibernate: 
+    select
+        item0_.id as id1_0_0_,
+        item0_.name as name2_0_0_,
+        item0_.price as price3_0_0_ 
+    from
+        basquiat_item item0_ 
+    where
+        item0_.id=?
+Hibernate: 
+    select
+        item0_.id as id1_0_0_,
+        item0_.name as name2_0_0_,
+        item0_.price as price3_0_0_ 
+    from
+        basquiat_item item0_ 
+    where
+        item0_.id=?
+Item [id=1, name=Fodera Emperor5 Elite, price=14000000]
+Item [id=2, name=Fender American Jazz Bass 5 Deluxe, price=2400000]
+Hibernate: 
+    select
+        item0_.id as id1_0_0_,
+        item0_.name as name2_0_0_,
+        item0_.price as price3_0_0_ 
+    from
+        basquiat_item item0_ 
+    where
+        item0_.id=?
+Hibernate: 
+    select
+        item0_.id as id1_0_0_,
+        item0_.name as name2_0_0_,
+        item0_.price as price3_0_0_ 
+    from
+        basquiat_item item0_ 
+    where
+        item0_.id=?
+Item [id=1, name=Fodera Emperor5 Elite, price=14000000]
+Item [id=2, name=Fender American Jazz Bass 5 Deluxe, price=2400000]
+
+```
+
+아이디가 1과 2인 녀석을 조회하면 1차 캐시에 없기 때문에 쿼리를 날려서 조회를 하고 1차 캐시에 담을 것이다.
+하지만 중간에 em.clear()를 통해서 영속성 컨텍스트를 초기화했기 때문에 쿼리를 다시 한번 날려서 조회하는 것을 알수 있다.
+
+그리고 마지막 방식은 em.close()인 경우인데 하나의 트랜잭션이 종료되었기 때문에 영속성 컨텍스트가 초기화된다.
+
+이것은 앞서 설명이 빠진 부분이긴 한테 영속성 컨텍스트는 EntityManagerFactory로부터 EntityManager를 가져오게 되면 그에 해당하는 Persistence Context가 매핑된다.
+
+이말인 즉 em.close()가 되는 순간 EntitiyManager와 매핑된 영속성 컨텍스트는 사라진다는 의미이다.
+
+
+삭세 상태는 말 그대로 삭제를 하는 것이다. 설명대로 DB에서도 삭제를 하는데 그럼 실제로 확인을 해봐야겠지?
+
+```
+package io.basquiat;
+
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.EntityTransaction;
+import javax.persistence.Persistence;
+
+import io.basquiat.model.Item;
+
+/**
+ * 
+ * created by basquiat
+ *
+ */
+public class jpaMain {
+
+    public static void main(String[] args) {
+        EntityManagerFactory emf = Persistence.createEntityManagerFactory("basquiat");
+        EntityManager em = emf.createEntityManager();
+        EntityTransaction tx = em.getTransaction();
+        tx.begin();
+        try {
+        	
+        	Item item = em.find(Item.class, 1L);
+        	System.out.println(item);
+        	em.remove(item);
+        	
+        	Item item1 = em.find(Item.class, 1L);
+        	System.out.println(item1);
+        	
+        	
+        	tx.commit();
+        } catch(Exception e) {
+            tx.rollback();
+        } finally {
+            em.close();
+        }
+        emf.close();
+    }
+    
+}
+
+````
+
+결과가 역시 예상된다.
+
+```
+Hibernate: 
+    select
+        item0_.id as id1_0_0_,
+        item0_.name as name2_0_0_,
+        item0_.price as price3_0_0_ 
+    from
+        basquiat_item item0_ 
+    where
+        item0_.id=?
+Item [id=1, name=Fodera Bass, price=15000000]
+null
+Hibernate: 
+    /* delete io.basquiat.model.Item */ delete 
+        from
+            basquiat_item 
+        where
+            id=?
+```
+
+아이디 1을 조회한 후에 remove(item)을 날리고 다시 조회를 하면 null이 찍힌 것을 볼 수 있다.
+
+그리고 commit이 되는 순간 delete쿼리가 날아간 것을 확인할 수 있다.
+
+# Next 
+
+너무 길어져서 영속성 컨텍스트의 이점을 설명해야하는데 다음 브랜치에 앞에서 설명을 할 예정이다.
