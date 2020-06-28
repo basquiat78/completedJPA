@@ -45,4 +45,7 @@ ORM도 괜찮은 선택이긴 한데 거대한 레거시라는 공룡앞에서 �
 커밍~ 쑨~
 
 # 진행 상황
-[개발전에 환경 잡고 가자](https://github.com/basquiat78/completedJPA/tree/1.enviroment)
+[개발전에 환경 잡고 가자](https://github.com/basquiat78/completedJPA/tree/1.enviroment)    
+
+
+[영속성 컨텍스트](https://github.com/basquiat78/completedJPA/tree/2.persistenceContext)
