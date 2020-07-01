@@ -1,9 +1,13 @@
 package io.basquiat.model;
 
 import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
 import javax.persistence.Id;
 
 import org.apache.commons.lang3.StringUtils;
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
 
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -23,6 +27,19 @@ import lombok.ToString;
 public class OtherItem {
 
 	@Id
+	@GenericGenerator(
+            name = "SequenceGenerator",
+            strategy = "org.hibernate.id.enhanced.SequenceStyleGenerator",
+            parameters = {
+                    @Parameter(name = "sequence_name", value = "hibernate_sequence"),
+                    @Parameter(name = "optimizer", value = "pooled"),
+                    @Parameter(name = "initial_value", value = "1"),
+                    @Parameter(name = "increment_size", value = "100")
+            }
+    )
+    @GeneratedValue(strategy = GenerationType.SEQUENCE,
+            generator = "SequenceGenerator"
+    )
 	private Long id;
 
 	@Setter
