@@ -1015,6 +1015,15 @@ INFO: Session Metrics {
 
 물론 확인해 본적은 없지만 이렇게 database를 catalog에 따라 스왑하는 것에 대한 비용도 존재하지 않을까???
 
+```
+jdbc:mysql://localhost:3306?rewriteBatchedStatements=true&amp;useUnicode=yes&amp;characterEncoding=UTF-8&amp;serverTimezone=Asia/Seoul
+```
+
+mysql://localhost:3306?rewriteBatchedStatements=true... 요런식으로 url을 설정하는 것은 뭔가 꼼수 또는 사파적인 느낌도 나고...
+
+대부분의 예제는 그렇지가 않아서 말이지...     
+
+
 ~~여러분이 multi tenancy별 통계비스무리한 것을 위해 이런 괴랄한 쿼리를 날릴리가 없다..~~     
 
 ```
