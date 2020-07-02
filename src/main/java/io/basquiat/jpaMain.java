@@ -6,6 +6,7 @@ import javax.persistence.EntityTransaction;
 import javax.persistence.Persistence;
 
 import io.basquiat.model.Item;
+import io.basquiat.model.OtherItem;
 
 /**
  * 
@@ -21,23 +22,27 @@ public class jpaMain {
         tx.begin();
         try {
         	
-        	Item foderaBass = Item.builder().name("Fodera Emperor2 5").price(15000000).build();
+        	Item bass = Item.builder().name("Fodera Emperor2 5")
+								     .price(15000000)
+								     .build();
+        	
+        	em.persist(bass);
+        	
+        	OtherItem foderaBass = OtherItem.builder().name("Fodera Emperor2 5")
+        									     .price(15000000)
+        									     .build();
+        	
         	em.persist(foderaBass);
-        	em.flush();
-        	em.clear();
+        	OtherItem fenderJBass = OtherItem.builder().name("Fender Jazz Bass")
+				     .price(15000000)
+				     .build();
         	
-        	int salePrice = 1000000;
-        	
-        	Item selectBass = em.find(Item.class, 1L);
-        	System.out.println("Bass Price is " + selectBass.getPrice());
-        	System.out.println("beforeUpdate price");
-        	selectBass.setPrice(selectBass.getPrice() - salePrice);
-        	System.out.println("update price");
-        	em.flush();
-        	em.clear();
-        	
-        	Item againSameSelectBass = em.find(Item.class, 1L);
-        	System.out.println("Bass Price is " + againSameSelectBass.getPrice());
+        	em.persist(fenderJBass);
+        	OtherItem fenderPBass = OtherItem.builder().name("Fender Precision Bass")
+				     .price(15000000)
+				     .build();
+
+        	em.persist(fenderPBass);
         	
         	
         	tx.commit();
