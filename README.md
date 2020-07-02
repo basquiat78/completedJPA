@@ -301,7 +301,7 @@ ERROR: Duplicate entry 'A-B' for key 'basquiat_other_item.UNIQUE_AType_BType'
 
 사실 이부분에 대해서 자세하게 설명한 것이 없어서 대부분 이런 옵션이 있는지 모르는 분들이 많다.     
 
-알고 있어서 잘 쓰지도 않기도 하고....     
+알고 있어도 잘 쓰지도 않기도 하고....     
 
 나의 경우에는 이전 암호화폐 거래소에서 거래소 API서버 관련 작업을 하면서 이것을 써보게 된 계기가 되었는데 당시 사용한 DB가 postgresql이었기 때문에 가능했을지도 모른다.
 
