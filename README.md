@@ -372,6 +372,16 @@ database == schema == catalog == a namespace within the server. 이 말그대로
 
 그리고 우리는 DBeaver나 workBench등 툴을 이용하든 일단 jpa라는 database를 생성하자.
 
+```
+create database jpa;
+
+grant all privileges on *.* to 'basquiat'@'localhost' with grant option;
+
+```
+
+권한도 줘야 한다. 그렇지 않으면 access denied에러를 볼 것이기 때문이다.
+
+
 그다음에 우리는 기존의 코드를 살펴볼까 한다. 일단 전 브랜치의 코드를 사용해서 기본키 전략 매핑으로 테이블 전략을 사용한 것까지 돌아가자.
  
  OtherItem
