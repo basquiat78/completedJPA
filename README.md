@@ -1085,6 +1085,8 @@ postgresql설치 방법은 구글에서 찾아보시기 바란다.
 
 나는 평소에 쓰던 basquiat라고 생성했다.
 
+기본으로 생성되는 database는 postgres이다. ~~sys보단 뭔가 멋져보인다~~
+
 ```
 
 create database basquiat;
