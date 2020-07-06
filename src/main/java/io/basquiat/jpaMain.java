@@ -29,8 +29,12 @@ public class jpaMain {
         	
         	Item selected = em.find(Item.class, 1L);
         	System.out.println(selected.toString());
+        	
+        	Thread.sleep(1000);
+        	
         	selected.setBadge(BadgeType.BEST);
         	em.flush();
+        	em.clear();
         	
         	Item selected1 = em.find(Item.class, 1L);
         	System.out.println(selected1.toString());

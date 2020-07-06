@@ -2051,8 +2051,12 @@ public class jpaMain {
         	
         	Item selected = em.find(Item.class, 1L);
         	System.out.println(selected.toString());
+        	
+        	Thread.sleep(1000);
+        	
         	selected.setBadge(BadgeType.BEST);
         	em.flush();
+        	em.clear();
         	
         	Item selected1 = em.find(Item.class, 1L);
         	System.out.println(selected1.toString());
@@ -2068,7 +2072,6 @@ public class jpaMain {
     }
     
 }
-
 
 ```
 
@@ -2096,7 +2099,7 @@ Hibernate:
         basquiat_item item0_ 
     where
         item0_.id=?
-Item [id=1, name=Fodera, price=15000000, test=null, badge=NEW, createdAt=2020-07-05T21:52:36, updatedAt=null]
+Item [id=1, name=Fodera, price=15000000, test=null, badge=NEW, createdAt=2020-07-07T08:45:26, updatedAt=null]
 Hibernate: 
     /* update
         io.basquiat.model.Item */ update
@@ -2110,7 +2113,20 @@ Hibernate:
             updatedAt=? 
         where
             id=?
-Item [id=1, name=Fodera, price=15000000, test=null, badge=BEST, createdAt=2020-07-05T21:52:36, updatedAt=2020-07-05T21:52:35.687]
+Hibernate: 
+    select
+        item0_.id as id1_0_0_,
+        item0_.badge as badge2_0_0_,
+        item0_.createdAt as createda3_0_0_,
+        item0_.it_name as it_name4_0_0_,
+        item0_.it_price as it_price5_0_0_,
+        item0_.test as test6_0_0_,
+        item0_.updatedAt as updateda7_0_0_ 
+    from
+        basquiat_item item0_ 
+    where
+        item0_.id=?
+Item [id=1, name=Fodera, price=15000000, test=null, badge=BEST, createdAt=2020-07-07T08:45:26, updatedAt=2020-07-07T08:45:27]
 
 ````
 
@@ -2195,3 +2211,7 @@ DDL생성한 부분을 보면 @Lob가 붙은 필드는 clob에 해당하는 long
 ## At A Glance     
 
 다음 브랜치에는 키매핑 전략에 대해 설명할 예정이다. 아마 이전 브랜치들에서 어느 정도 설명했놨기 때문에 디테일한 부분의 설명만 더하고 끝낼 예정이다.     
+
+add. @PrePersit/@PreUpdate 테스트에서 업데이트 시간이 등록시간보다 앞선 이상한 결과가 나와서 한참을 생각했다.     
+
+해당 코드 테스트 부분은 수정해서 올려본다. 말이 안되는 코드이긴 하지만 강제적으로 Thread.sleep(1000);으로 시간차 공격을 해서 그 차이만큼 나오는지 테스트해보는 코드이다.
