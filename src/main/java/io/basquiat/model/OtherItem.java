@@ -1,10 +1,8 @@
 package io.basquiat.model;
 
-import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
-import javax.persistence.Table;
 
 import org.apache.commons.lang3.StringUtils;
 import org.hibernate.annotations.GenericGenerator;
@@ -22,8 +20,8 @@ import lombok.ToString;
  * created by basquiat
  *
  */
-@Entity
-@Table(name = "basquiat_other_item")
+//@Entity
+//@Table(name = "basquiat_other_item")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @ToString
 public class OtherItem {

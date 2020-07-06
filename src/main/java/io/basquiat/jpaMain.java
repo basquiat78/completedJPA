@@ -5,8 +5,8 @@ import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
 import javax.persistence.Persistence;
 
+import io.basquiat.model.BadgeType;
 import io.basquiat.model.Item;
-import io.basquiat.model.OtherItem;
 
 /**
  * 
@@ -22,27 +22,18 @@ public class jpaMain {
         tx.begin();
         try {
         	
-        	Item bass = Item.builder().name("Fodera Emperor2 5")
-								     .price(15000000)
-								     .build();
+        	Item item = Item.builder().name("Fodera").price(15000000).badge(BadgeType.NEW).build();
+        	em.persist(item);
+        	em.flush();
+        	em.clear();
         	
-        	em.persist(bass);
+        	Item selected = em.find(Item.class, 1L);
+        	System.out.println(selected.toString());
+        	selected.setBadge(BadgeType.BEST);
+        	em.flush();
         	
-        	OtherItem foderaBass = OtherItem.builder().name("Fodera Emperor2 5")
-        									     .price(15000000)
-        									     .build();
-        	
-        	em.persist(foderaBass);
-        	OtherItem fenderJBass = OtherItem.builder().name("Fender Jazz Bass")
-				     .price(15000000)
-				     .build();
-        	
-        	em.persist(fenderJBass);
-        	OtherItem fenderPBass = OtherItem.builder().name("Fender Precision Bass")
-				     .price(15000000)
-				     .build();
-
-        	em.persist(fenderPBass);
+        	Item selected1 = em.find(Item.class, 1L);
+        	System.out.println(selected1.toString());
         	
         	
         	tx.commit();
