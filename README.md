@@ -44,8 +44,21 @@ ORM도 괜찮은 선택이긴 한데 거대한 레거시라는 공룡앞에서 �
 
 커밍~ 쑨~
 
+아참 이것은 김영한님의 책 [자바 ORM 표준 JPA 프로그래밍](http://acornpub.co.kr/book/jpa-programmig)를 토대로 진행된다. 
+
+홍보같지만 개인적인 친분도 없을 뿐더러 만나 뵌 적도 없다. 김영한님은 나를 모를것이다. 
+
+따라서 이 책을 보고 공부하신 분들에게는 크게 도움이 되지 않을 수 있다.
+
+JPA를 처음 접하시는 분들에게는 그래도 어느정도 도움이 되길 희망하면서...
+
 # 진행 상황
 [개발전에 환경 잡고 가자](https://github.com/basquiat78/completedJPA/tree/1.enviroment)    
 
+[영속성 컨텍스트](https://github.com/basquiat78/completedJPA/tree/2.persistenceContext)      
 
-[영속성 컨텍스트](https://github.com/basquiat78/completedJPA/tree/2.persistenceContext)
+[영속성 컨텍스트 두 번째 이야기... 아이참 브랜치 넘버링 잘못했넹..](https://github.com/basquiat78/completedJPA/tree/3-1.persistencContext)    
+
+[엔티티 매핑](https://github.com/basquiat78/completedJPA/tree/4.entityMapping)    
+
+[엔티티 매핑 part2](https://github.com/basquiat78/completedJPA/tree/4-1.entitiyMapping2)
