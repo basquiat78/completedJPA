@@ -1510,7 +1510,7 @@ id  badge	    name     price    test
 
 일단 코드로 한번 테스트해보자. Item의 badge필드에 붙은 녀석을 @Enumerated(EnumType.ORDINAL)이렇게 수정하든가 아니면 기본값이 ORDIANL이니  @Enumerated만 붙이고 기존 코드를 그대로 실행해 보자.     
 
-DB에서 체크를 해보면 인덱스로 따지기 때문에 OVERSEA의 경우는 인덱스가 2이기 때문에 3이라는 값이 들어가 있을 것이다.     
+DB에서 체크를 해보면 인덱스로 따지기 때문에 OVERSEA의 경우는 인덱스가 2이기 때문에 2이라는 값이 들어가 있을 것이다.     
 
 그리고 요청에 의해서 이 뱃지 타입이 늘었다고 생각해 보자. 일단 나의 경우에는 BadgeType의 나열된 값을 알파벳 순서대로 해놨다.     
 
