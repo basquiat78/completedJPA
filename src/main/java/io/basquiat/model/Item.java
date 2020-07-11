@@ -1,6 +1,5 @@
 package io.basquiat.model;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import javax.persistence.Column;
@@ -11,12 +10,14 @@ import javax.persistence.Id;
 import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
 import javax.persistence.Table;
+import javax.persistence.TableGenerator;
 
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 
 /**
  * 
@@ -25,17 +26,23 @@ import lombok.Setter;
  */
 @Entity
 @Table(name = "basquiat_item")
-//@DynamicUpdate
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@TableGenerator(
+		 name = "seq_generator",
+		 table = "sequence_table",
+		 pkColumnValue = "item_seq", 
+		 initialValue = 0,
+		 allocationSize = 1) 
+@ToString
 public class Item {
 
 	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@GeneratedValue(strategy = GenerationType.TABLE, generator = "seq_generator")
 	private Long id;
 
 	@Setter
 	@Getter
-	@Column(name = "it_name", columnDefinition = "varchar(20) not null")
+	@Column(name = "it_name")
 	private String name;
 
 	@Setter
@@ -43,9 +50,6 @@ public class Item {
 	@Column(name = "it_price")
 	private Integer price;
 
-	@Column(name = "test", precision = 10, scale = 8)
-	private BigDecimal test;
-	
 	@Setter
 	@Getter
 	private BadgeType badge;
@@ -73,11 +77,5 @@ public class Item {
     protected void onUpdate() {
     	updatedAt = LocalDateTime.now();
     }
-
-	@Override
-	public String toString() {
-		return "Item [id=" + id + ", name=" + name + ", price=" + price + ", test=" + test + ", badge=" + badge
-				+ ", createdAt=" + createdAt + ", updatedAt=" + updatedAt + "]";
-	}
 	
 }

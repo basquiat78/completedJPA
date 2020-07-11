@@ -5,9 +5,6 @@ import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
 import javax.persistence.Persistence;
 
-import io.basquiat.model.BadgeType;
-import io.basquiat.model.Item;
-
 /**
  * 
  * created by basquiat
@@ -21,20 +18,6 @@ public class jpaMain {
         EntityTransaction tx = em.getTransaction();
         tx.begin();
         try {
-        	
-        	Item item = Item.builder().name("Fodera").price(15000000).badge(BadgeType.NEW).build();
-        	em.persist(item);
-        	em.flush();
-        	em.clear();
-        	
-        	Item selected = em.find(Item.class, 1L);
-        	System.out.println(selected.toString());
-        	selected.setBadge(BadgeType.BEST);
-        	em.flush();
-        	
-        	Item selected1 = em.find(Item.class, 1L);
-        	System.out.println(selected1.toString());
-        	
         	
         	tx.commit();
         } catch(Exception e) {
