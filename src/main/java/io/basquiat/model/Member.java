@@ -1,9 +1,14 @@
 package io.basquiat.model;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.JoinTable;
+import javax.persistence.ManyToMany;
 import javax.persistence.Table;
 
 import lombok.AccessLevel;
@@ -18,16 +23,16 @@ import lombok.ToString;
  *
  */
 @Entity
-@Table(name = "item")
+@Table(name = "member")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @ToString
-public class Item {
-	
+public class Member {
+
 	@Builder
-	public Item(String name, int stock) {
+	public Member(String name, String address) {
 		this.name = name;
-		this.stock = stock;
+		this.address = address;
 	}
 	
 	@Id
@@ -35,7 +40,11 @@ public class Item {
 	private Long id;
 	
 	private String name;
-
-	private int stock;
+	
+	private String address;
+	
+	@ManyToMany
+	@JoinTable(name = "member_item")
+	private List<Item> items = new ArrayList<>();
 	
 }

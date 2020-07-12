@@ -18,24 +18,26 @@ import lombok.ToString;
  *
  */
 @Entity
-@Table(name = "item")
+@Table(name = "locker")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @ToString
-public class Item {
-	
+public class Locker {
+
 	@Builder
-	public Item(String name, int stock) {
+	public Locker(String name, String position) {
 		this.name = name;
-		this.stock = stock;
+		this.position = position;
 	}
 	
+	/** 락커 아이디 */
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 	
+	/** 락커 이름 */
 	private String name;
 
-	private int stock;
-	
+	/** 락커가 있는 위치 정보 */
+	private String position;
 }

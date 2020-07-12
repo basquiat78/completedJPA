@@ -1,147 +1,204 @@
-# Primary Key Mapping    
+# 단방향 연관관계 매핑     
 
-이제는 기본 키 매핑에 대해서 알아보고자 한다.     
+일단 이 브랜치를 진행하기 앞서 우리는 JPA를 공부하지만 맨 처음 브랜치에서 언급했듯이 JPA는  database위에 있는 기술이다.     
 
-이미 이전 브랜치에서 맛을 보긴 했지만 테이블 전략은 좀 부족한 감이 있다.     
+이게 무슨 말이냐면 최소한 DB에 대한 기본 개념은 알아야 한다는 것이다.     
 
-아무래도 mySql기준으로 sequence전략을 선택시 자동으로 테이블 전략을 선택하는 방식이기 때문이다.     
+특히 테이블관련 테이블간의 관계에 대해서 고민을 해봐야 한다는 것이다.     
 
-암튼 이제 하나씩 세세하게 해보자.    
+그리고 DB에서 테이블간의 관계는 사실 별거 없다. primary key, forein key에 대한 최소한의 개념을 알아야 한다.    
 
-## @Id    
+물론 정규화된 테이블의 경우에도 그렇고 비정규화된 테이블 즉 pk와 fk가 잡혀있지 않아도 조인해서 가져 올 수 있는 관계있는 컬럼이 있다면 얼마든지 조인해서 정보를 가져올 수 있다.    
 
-가장 기본적인 방법으로 이 경우에는 직접적으로 pk를 넣어주는 방법이다.     
+그리고 객체간의 연관 관계와 db에서의 테이블간의 관계에 대한 차이점을 어느 정도 인지를 해야 한다. 왜냐하면 결국 이러한 db의 테이블을 객체로 추상화한 것이 JPA기 때문이다.     
 
-예를 들면 우리가 책을 사게 되면 ISBN이라고 해서 International Standard Book Number(국제 표준 도서 번호) 같은 것을 보게 된다. 이것은 해당 서적의 고유한 번호를 국제 표준 도서 번호에 맞춰서 생성하고 붙이게 된다.     
+그리고 단방향 연간관계 매핑이라고 했는데 그러면 당연히 단방향이 있으면 양방향이 있다는 것을 JPA를 공부하신 분들이라면 아실 것이다.     
 
-유니크한 값이라는 의미이다. 만일 저렇게 생성해서 직접적으로 할당하게 되는 경우에는 그냥 어떤 옵션을 주지 않고 저렇게만 걸어두면 된다.
+하지만 SQL을 보면 테이블간에는 단방향, 양방향이라는 개념이 성립되지 않는다. 단지 연관관계만이 존재한다.     
 
-이 방식은 그냥 테스트 코드 없이 입코딩으로만 진행하겠다.      
+[The 3 Types of Relationships in Database Design](https://database.guide/the-3-types-of-relationships-in-database-design/)    
 
-근데 서적의 예제나 관련 경험 이야기들을 들어보면 이 부분은 상당히 고심을 해야 하는 부분이다.     
+입으로 한번 털어보자.     
 
-왜냐하면 주민번호같은 경우가 그 예이다.    
+책에서도 그렇고 어느 블로그를 가더라도 가장 기본적인 예제가 Member와 Team을 예로 든다.    
 
-이와 관련된 글들과 여러 커뮤니티에 보면 사례글들이 참 많은데 이유는 정보보호법으로 인해 주민번호를 보관하면 안되기 때문이다.    
+우리는 좀 더 현실적인 방식으로 축구에서 Player와 Club으로 한번 생각해 보자.    
 
-또는 복호화할수 없는 방식으로 암호화해서 저장하는 방식으로 변경해야 한다.    
+가령 손흥민은 현재 토트넘에 소속된 선수이다.   
 
-실제로 첫 직장에서 모 대기업 그룹웨어 관련 작업하면서 이런 경우를 봤는데 다행이도 거기에선 이것을 pk로 설정하지 않아서 큰 문제가 없었지만 이것을 pk로 잡은 경우 어마어마한 마이그레이션 비용을 들였다는 이야기들은 이제 ~~전설은 아니고~~ 레전드가 되버리긴 했다.    
+정말 특별한 경우라서 '홍길동'이라는 사람이 여러 부서에 소속되는 경우가 아니라면 (실제 이런 경우를 대기업 프로젝트에서 본적이 있어서) 대부분은 하나의 부서에만 소속되어 있듯이 손흥민은 토트넘 소속이다.     
 
-따라서 일반적으로 mySql의 경우에는 제공하는 auto_increment옵션으로 자동 생성하거나 오라클같은 경우에는 sequence생성해서 pk를 따와서 사용하는 경우가 일반적이다.     
+하지만 토트넘이라는 클럽은 어떤가?     
 
-현재 재직중인 회사는 상품 코드의 경우에는 코드를 젠해서 사용한다.    
+감독인 조세 무리뉴에서 해리 케인, 스티븐 베르흐윈, 위고 요리스등 다양한 선수들이 포함되어 있다.     
 
-## IDENTITY Strategy    
+자 그러면 클럽입장에서 선수와의 관계는 어떤 관계일까?     
 
-위에서 언급했듯이 데이터베이스에 pK를 따는 것을 위임하는 방식을 의미한다.    
+![실행이미지](https://github.com/basquiat78/completedJPA/blob/6.unary-relation-mapping/capture/capture1.png)    
 
-내 경험상 많은 DB(H2, HSQL제외)를 사용해 보진 못했다. mySQL, mariaDB, oracle, DB2, sybase(SAP관련 프로젝트로 딱 한번 사용), postGreSQL정도인데 그럼 이것을 지원하는 DB가 뭔지 어느정도는 알아야겠다.     
+위와 같을 것이다. 일단 위 erd를 그릴 때 내가 처음 사용해봐서 잘 못 사용하고 있다는 것을 알았는데 뭐 설명하기에는 무리가 없어서 그대로 사용한다.    
 
-내가 알고 있는 녀석은 mySql, mariaDB(뭐 이건 당연한건가?), IBM에서 만든 DB2 (이넘에 대한 안좋은 기억이....), postGres(이넘은 둘다 지원한다.)정도이다. 더 있겠지만 뭐...     
+즉 Club과 Player는 Club ->(one-to-many)Player, Player -> (many-to-one) Club의 관계를 파악해야 한다.    
 
-postgres는 Serial 타입으로 컬럼을 생성하게 된다.    
+위의 관계를 말로 풀면 클럽은 여러명의 선수들이 모여있는 집단이기 때문에 one-to-many이고 수많은 선수들이 하나의 클럽에만 소속할 수 있기에 many-to-one의 relationship을 가지게 된다.    
 
-일단 엔티티에는 다음과 같이    
+다만 방향성이 없다는 것은 단순하게 쿼리로 그냥 생각해 봐도 알 수 있다.     
 
-```
-
-@Id
-@GeneratedValue(strategy = GenerationType.IDENTITY)
-private Long id;
+선수가 팀이 없을 수 없다는 가정하에 Inner join으로 한번 쿼리를 짜 보자.
 
 ```
 
-일단 눈으로 확인해 보자.     
+SELECT p.*,
+		 c.*
+	FROM player p
+	JOIN club c ON p.club_id = c.id
 
-```
-Hibernate: 
-    
-    create table basquiat_item (
-       id  bigserial not null,
-        badge int4,
-        createdAt timestamp,
-        it_name varchar(255),
-        it_price int4,
-        updatedAt timestamp,
-        primary key (id)
-    )
+또는
+
+SELECT c.*,
+		 p.*
+	FROM club c
+	JOIN player p ON c.id = p.club_id
 
 ```
 
-postgres는 bigserial로 생성한 것을 볼 수 있다. 아마도 차후의 사이즈를 고려해서 가장 큰 bigserial로 생성하는 듯 싶다.
+방향성이라기보다는 무엇을 중심으로 질의를 하느냐에 따른 선택지라는 것이다.     
 
-하지만 실질적으론? 시퀀스 생성해서 한다는 것이다. basquiat_item_id_seq 요렇게 생겨먹은 시퀀스를 하나 생성하게 되는 것을 볼 수 있다.     
+사실 데이터베이스 중심에서 생각하다가 이것을 객체에 올려두고 생각하면 그 사이의 차이점이 존재한다.    
 
-아마도 이름 명명규칙은 테이블 명에 _id_seq를 붙이는 형식인듯....     
+한번 코드로 살펴보자. 일단 위에 db관점에서 테이블을 중심으로 엔티티를 설계하면 다음과 같이 하게 된다.    
 
-하지만 mySql은? 일단 눈으로 보자.     
 
-```
-Hibernate: 
-    
-    create table basquiat_item (
-       id bigint not null auto_increment,
-        badge integer,
-        createdAt datetime,
-        it_name varchar(255),
-        it_price integer,
-        updatedAt datetime,
-        primary key (id)
-    ) engine=InnoDB
-
+Player
 
 ```
 
-bigint타입으로 auto_increment옵션을 주고 있다는 것을 알 수 있다.    
+package io.basquiat.model;
 
-앞서 설명했듯이 이렇게 DB에 위임을 한 경우이기 때문에 영속성 컨텍스트 입장에서는 당연하게도 DB에 꼽히지 않는다면 pk를 알수 가 없다.    
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Table;
 
-즉 영속성 컨텍스트 입장에서는 그것을 알기 위해서는 DB에 일단 넣어두고 pk를 가져와야 하는 것이다.    
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
 
-단점으로 언급하는 점은 지연쓰기, 즉 버퍼링을 하고 쓰기하는 방법을 쓸 수 없다고 언급을 하고 있다.     
+/**
+ * 
+ * created by basquiat
+ *
+ */
+@Entity
+@Table(name = "player")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@ToString
+public class Player {
 
-그러면서도 성능상 이점은 그렇게 크지 않다고 하니 이 방법이 상황에 맞다면 쓰는게 좋은 듯 싶다.     
+	@Builder
+	public Player(String name, int age, String position, Long clubId) {
+		this.name = name;
+		this.age = age;
+		this.position = position;
+		this.clubId = clubId;
+	}
 
-언제나 이런 것들은 상황에 맞춰서 사용하는게 좋고 무리가 없다면 사용하는데 주저할 필요는 없는 거 같다.     
+	/** 선수 아이디 */
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+	
+	/** 선수 명 */
+	@Getter
+	private String name;
+	
+	/** 선수 나이 */
+	@Getter
+	private int age;
 
-
-## SEQUENCE Strategy    
-
-mySql은 시퀀스를 지원하지 않으니 나의 경우에는 postgres로 진행하겠다. (뭐 결국 IDENTITY도 시퀀스인 마당에) 만일 H2나 HSQL같은 라이트한 DB를 사용하는 분들이라면 그대로 진행해도 무방하다.     
-
-지금까지 mySQL과 postgres를 깔아보시고 진행한 분들이라면 persistence.xml를 수정해서 postgres로 진행해 보자.    
-
-대표적으로 오라클, DB2는 시퀀스를 지원하니 오라클이나 지원하는 DB가 깔려 있다면 그것으로 테스트해보면 되겠다.     
-
-그럼 시퀀스가 뭐니?라는 의문이 드는데 대부분 검색을 해보면 오라클 오브젝트를 이야기한다.     
-
-'데이터베이스 시퀀스는 유일한 값을 순서대로 생성하는 특별한 데이터베이스 오브젝트를 의미한다.'    
-
-하지만 시퀀스를 지원하는 DB로 넓게 생각해도 된다. 시퀀스에는 특징이 하나 있는데 보통 롤백이 되는 경우가 생기면 이 시퀀스는 롤백 대상이 되지 않는다는 것이다.     
-
-이 정도만 알고 지나가자.     
-
-'그럼 위 말대로라면 결국 DB를 통해서 시퀀스를 조회해서 id를 가져오겠군요?'     
-
-~~네 그렇읍니다.~~    
-
-하지만 롤백의 타겟이 되지 않는 점과 유일한 id를 생성하기 때문에 시퀀스를 활용해서 pk를 사용하게 된다.     
-
-자 그럼 우리는 이제부터 코드로 이야기 하자. 
-
-일반적인 방식은 다음과 같이 설정하면 된다.
-
-```
-
-@Id
-@GeneratedValue(strategy = GenerationType.SEQUENCE)
-private Long id;
+	/** 선수 포지션 */
+	@Getter
+	private String position;
+	
+	/** 선수가 속한 클럽 아이디 */
+	@Getter
+	@Column(name = "club_id")
+	private Long clubId;
+	
+}
 
 
 ```
 
-가장 기본적인 방식이다. 그러면 이제 한번 실행을 해보자.
+Club
+
+```
+package io.basquiat.model;
+
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Table;
+
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+
+/**
+ * 
+ * created by basquiat
+ *
+ */
+@Entity
+@Table(name = "club")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@ToString
+public class Club {
+
+	@Builder
+	public Club(String name, int ranking) {
+		this.name = name;
+		this.ranking = ranking;
+	}
+
+	/** 클럽 아이디 */
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+	
+	/** 클럽 명 */
+	@Getter
+	private String name;
+	
+	/** 클럽 랭킹 순위 */
+	@Getter
+	private int ranking;
+	
+}
+
+
+```
+
+자 코드를 보면 확실히 테이블을 객체로 잘 매핑했다. 그럼 뭐가 문제일까?     
+
+사실 문제는 없다. 일단 코드로 확인해보는게 최고다.    
+
+여기서 foreign key를 가지고 있는 객체 또는 테이블은 Player이다. 
+
+실제 상황에서의 관점으로 살펴보자.     
+
+선수의 입장에서는 내가 경기를 뛰기 위해서는 무엇이 필요할까? 당연히 팁이 있어야 한다. 팀에 들어가야 하는 것이다.         
+
+OOP는 이러한 현상들을 관찰하고 영역안으로 녹여내는것이 중요하다.     
+
+자 그럼 코드는 어떻게 짜야 할까?    
 
 ```
 package io.basquiat;
@@ -151,8 +208,8 @@ import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
 import javax.persistence.Persistence;
 
-import io.basquiat.model.BadgeType;
-import io.basquiat.model.Item;
+import io.basquiat.model.Club;
+import io.basquiat.model.Player;
 
 /**
  * 
@@ -168,8 +225,22 @@ public class jpaMain {
         tx.begin();
         try {
         	
-        	Item item = Item.builder().name("Fodera").price(15000000).badge(BadgeType.NEW).build();
-        	em.persist(item);
+        	// 1. 내가 들어가고 싶은 팀이 무엇인지 살펴본다.
+        	Club tottenhamFootballClub = Club.builder().name("Tottenham Hotspur Football Club")
+        											   .ranking(9)
+        											   .build();
+        	em.persist(tottenhamFootballClub);
+        	System.out.println("기본키 매핑은 Identity다. 그래서 쿼리 날아감.");
+        	
+        	// 2. 손흥민이 토트넘으로 들어간다.
+        	Player son = Player.builder().name("손흥민")
+        								 .age(27)
+        								 .position("Striker")
+        								 .clubId(tottenhamFootballClub.getId())
+        								 .build();
+        	em.persist(son);
+        	System.out.println("기본키 매핑은 Identity다. 그래서 쿼리 날아감.");
+        	
         	tx.commit();
         } catch(Exception e) {
             tx.rollback();
@@ -181,130 +252,14 @@ public class jpaMain {
     
 }
 
-
 ```
 
-위 코드를 실행하게 되면   
+코드 흐름도 문제가 없다. 토트넘이라는 클럽을 선정하고 그 클럽의 아이디를 가져와서 세팅을 하는 코드 자체는 문제가 없어 보인다.     
 
-
-```
-Hibernate: 
-    
-    drop sequence if exists hibernate_sequence
-Hibernate: create sequence hibernate_sequence start 1 increment 1
-7월 06, 2020 11:47:05 오후 org.hibernate.resource.transaction.backend.jdbc.internal.DdlTransactionIsolatorNonJtaImpl getIsolatedConnection
-INFO: HHH10001501: Connection obtained from JdbcConnectionAccess [org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator$ConnectionProviderJdbcConnectionAccess@3301500b] for (non-JTA) DDL execution was not in auto-commit mode; the Connection 'local transaction' will be committed and the Connection will be set into auto-commit mode.
-Hibernate: 
-    
-    create table basquiat_item (
-       id int8 not null,
-        badge int4,
-        createdAt timestamp,
-        it_name varchar(255),
-        it_price int4,
-        updatedAt timestamp,
-        primary key (id)
-    )
-7월 06, 2020 11:47:05 오후 org.hibernate.engine.transaction.jta.platform.internal.JtaPlatformInitiator initiateService
-INFO: HHH000490: Using JtaPlatform implementation: [org.hibernate.engine.transaction.jta.platform.internal.NoJtaPlatform]
-Hibernate: 
-    select
-        nextval ('hibernate_sequence')
-Hibernate: 
-    /* insert io.basquiat.model.Item
-        */ insert 
-        into
-            basquiat_item
-            (badge, createdAt, it_name, it_price, updatedAt, id) 
-        values
-            (?, ?, ?, ?, ?, ?)
-
-```
-
-위와 같이 쿼리가 날아가는 것을 알 수 있다. 그러면 이제 hibernate.hbm2ddl.auto 옵션을 none으로 하고 데이터를 하나 더 넣어보자.
+그러면 이제 조회를 해보자.    
 
 
 ```
-Hibernate: 
-    select
-        nextval ('hibernate_sequence')
-Hibernate: 
-    /* insert io.basquiat.model.Item
-        */ insert 
-        into
-            basquiat_item
-            (badge, createdAt, it_name, it_price, updatedAt, id) 
-        values
-            (?, ?, ?, ?, ?, ?)
-
-```
-
-시퀀스에서 pk를 가져오는 쿼리가 한번 날아가는 것을 확인할 수 있다.    
-
-실제로 pgAdmin에서 시퀀스를 조회하면 2번의 데이터를 넣었으니 
-
-```
-select * from hibernate_sequence;
-
-Data Output
-
-last_value | log_cnt | is_called
-2          | 32      | true
-
-```
-
-이렇게 마지막으로 가져간 pk가 2라는 것을 알 수 있다.     
-
-흐름을 따져보면 최초에 0이 있었을 것이고 인서트 되는 순간 nextval을 통해서 1을 증가시켜서 pk로 가져오고 시퀀스에 1로 업데이트 할것이다.     
-
-그리고 두 번째 데이터가 들어오면 1인 녀석을 1을 증가시켜서 pk로 2를 가져오고 시퀀스 정보에 2로 업데이트 하는 흐름이라는 것을 알 수 있다.     
-
-사실 IDENTITY와 관련해서 그럼 위에서 postgres는 시퀀스인가요?     
-
-궁금한건 못참는다.     
-
-다시 IDENTITY로 바꿔보자.     
-
-그리고 실행을 하게 되면    
-
-```
-Hibernate: 
-    
-    drop table if exists basquiat_item cascade
-7월 06, 2020 11:58:39 오후 org.hibernate.resource.transaction.backend.jdbc.internal.DdlTransactionIsolatorNonJtaImpl getIsolatedConnection
-INFO: HHH10001501: Connection obtained from JdbcConnectionAccess [org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator$ConnectionProviderJdbcConnectionAccess@6b85300e] for (non-JTA) DDL execution was not in auto-commit mode; the Connection 'local transaction' will be committed and the Connection will be set into auto-commit mode.
-Hibernate: 
-    
-    create table basquiat_item (
-       id  bigserial not null,
-        badge int4,
-        createdAt timestamp,
-        it_name varchar(255),
-        it_price int4,
-        updatedAt timestamp,
-        primary key (id)
-    )
-7월 06, 2020 11:58:39 오후 org.hibernate.resource.transaction.backend.jdbc.internal.DdlTransactionIsolatorNonJtaImpl getIsolatedConnection
-INFO: HHH10001501: Connection obtained from JdbcConnectionAccess [org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator$ConnectionProviderJdbcConnectionAccess@6058e535] for (non-JTA) DDL execution was not in auto-commit mode; the Connection 'local transaction' will be committed and the Connection will be set into auto-commit mode.
-7월 06, 2020 11:58:39 오후 org.hibernate.engine.transaction.jta.platform.internal.JtaPlatformInitiator initiateService
-INFO: HHH000490: Using JtaPlatform implementation: [org.hibernate.engine.transaction.jta.platform.internal.NoJtaPlatform]
-Hibernate: 
-    /* insert io.basquiat.model.Item
-        */ insert 
-        into
-            basquiat_item
-            (badge, createdAt, it_name, it_price, updatedAt) 
-        values
-            (?, ?, ?, ?, ?)
-
-```
-
-음? 분명 디비를 보면 basquiat_item_id_seq라는 시퀀스가 생성된 것을 볼 수 있지만 실제로 생성 쿼리와 nextval을 하는 쿼리가 전혀 보이지 않는다.    
-
-hibernate.hbm2ddl.auto 옵션을 none으로 하고 데이터를 하나 더 밀어넣어보자
-
-```
-
 package io.basquiat;
 
 import javax.persistence.EntityManager;
@@ -312,8 +267,8 @@ import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
 import javax.persistence.Persistence;
 
-import io.basquiat.model.BadgeType;
-import io.basquiat.model.Item;
+import io.basquiat.model.Club;
+import io.basquiat.model.Player;
 
 /**
  * 
@@ -328,15 +283,13 @@ public class jpaMain {
         EntityTransaction tx = em.getTransaction();
         tx.begin();
         try {
+        	// 손흥민을 조회한다.
+        	Player son = em.find(Player.class, 1L);
+        	System.out.println(son.toString());
         	
-        	Item item = Item.builder().name("Fodera").price(15000000).badge(BadgeType.NEW).build();
-        	em.persist(item);
-        	em.flush();
-        	System.out.println("sequence에서 뭔짓거리 하는거야?");
-        	em.detach(item);
-        	
-        	Item selected = em.find(Item.class, 3L);
-        	System.out.println(selected.toString());
+        	// 손흥민의 클럽 아이디로 클럽을 조회한다.
+        	Club sonsClub = em.find(Club.class, son.getClubId());
+        	System.out.println(sonsClub.toString());
         	
         	tx.commit();
         } catch(Exception e) {
@@ -349,124 +302,119 @@ public class jpaMain {
     
 }
 
-
 ```
 
-결과는??
+결과는?     
 
 ```
-
-7월 07, 2020 12:03:18 오전 org.hibernate.jpa.internal.util.LogHelper logPersistenceUnitInformation
+7월 12, 2020 12:55:13 오전 org.hibernate.jpa.internal.util.LogHelper logPersistenceUnitInformation
 INFO: HHH000204: Processing PersistenceUnitInfo [name: basquiat]
-7월 07, 2020 12:03:18 오전 org.hibernate.Version logVersion
+7월 12, 2020 12:55:13 오전 org.hibernate.Version logVersion
 INFO: HHH000412: Hibernate ORM core version 5.4.17.Final
-7월 07, 2020 12:03:18 오전 org.hibernate.annotations.common.reflection.java.JavaReflectionManager <clinit>
+7월 12, 2020 12:55:13 오전 org.hibernate.annotations.common.reflection.java.JavaReflectionManager <clinit>
 INFO: HCANN000001: Hibernate Commons Annotations {5.1.0.Final}
-7월 07, 2020 12:03:19 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl configure
+7월 12, 2020 12:55:14 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl configure
 WARN: HHH10001002: Using Hibernate built-in connection pool (not for production use!)
-7월 07, 2020 12:03:19 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl buildCreator
-INFO: HHH10001005: using driver [org.postgresql.Driver] at URL [jdbc:postgresql://localhost/basquiat]
-7월 07, 2020 12:03:19 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl buildCreator
-INFO: HHH10001001: Connection properties: {user=postgres, password=****}
-7월 07, 2020 12:03:19 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl buildCreator
+7월 12, 2020 12:55:14 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl buildCreator
+INFO: HHH10001005: using driver [com.mysql.cj.jdbc.Driver] at URL [jdbc:mysql://localhost:3306/basquiat?rewriteBatchedStatements=true&useUnicode=yes&characterEncoding=UTF-8&serverTimezone=Asia/Seoul]
+7월 12, 2020 12:55:14 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl buildCreator
+INFO: HHH10001001: Connection properties: {user=basquiat, password=****}
+7월 12, 2020 12:55:14 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl buildCreator
 INFO: HHH10001003: Autocommit mode: false
-7월 07, 2020 12:03:19 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl$PooledConnections <init>
+7월 12, 2020 12:55:14 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl$PooledConnections <init>
 INFO: HHH000115: Hibernate connection pool size: 20 (min=1)
-7월 07, 2020 12:03:19 오전 org.hibernate.dialect.Dialect <init>
-INFO: HHH000400: Using dialect: org.hibernate.dialect.PostgreSQLDialect
-7월 07, 2020 12:03:20 오전 org.hibernate.engine.transaction.jta.platform.internal.JtaPlatformInitiator initiateService
+7월 12, 2020 12:55:15 오전 org.hibernate.dialect.Dialect <init>
+INFO: HHH000400: Using dialect: org.hibernate.dialect.MySQL5InnoDBDialect
+7월 12, 2020 12:55:16 오전 org.hibernate.engine.transaction.jta.platform.internal.JtaPlatformInitiator initiateService
 INFO: HHH000490: Using JtaPlatform implementation: [org.hibernate.engine.transaction.jta.platform.internal.NoJtaPlatform]
 Hibernate: 
-    /* insert io.basquiat.model.Item
-        */ insert 
-        into
-            basquiat_item
-            (badge, createdAt, it_name, it_price, updatedAt) 
-        values
-            (?, ?, ?, ?, ?)
-sequence에서 뭔짓거리 하는거야?
+    select
+        player0_.id as id1_3_0_,
+        player0_.age as age2_3_0_,
+        player0_.club_id as club_id3_3_0_,
+        player0_.name as name4_3_0_,
+        player0_.position as position5_3_0_ 
+    from
+        player player0_ 
+    where
+        player0_.id=?
+Player(id=1, name=손흥민, age=27, position=Striker, clubId=1)
 Hibernate: 
     select
-        item0_.id as id1_0_0_,
-        item0_.badge as badge2_0_0_,
-        item0_.createdAt as createda3_0_0_,
-        item0_.it_name as it_name4_0_0_,
-        item0_.it_price as it_price5_0_0_,
-        item0_.updatedAt as updateda6_0_0_ 
+        club0_.id as id1_2_0_,
+        club0_.name as name2_2_0_,
+        club0_.ranking as ranking3_2_0_ 
     from
-        basquiat_item item0_ 
+        club club0_ 
     where
-        item0_.id=?
-Item [id=3, name=Fodera, price=15000000, badge=NEW, createdAt=2020-07-07T00:03:20.712, updatedAt=null]
-7월 07, 2020 12:03:20 오전 org.hibernate.engine.internal.StatisticalLoggingSessionEventListener end
+        club0_.id=?
+Club(id=1, name=Tottenham Hotspur Football Club, ranking=9)
+7월 12, 2020 12:55:16 오전 org.hibernate.engine.internal.StatisticalLoggingSessionEventListener end
 INFO: Session Metrics {
-    22100 nanoseconds spent acquiring 1 JDBC connections;
-    19900 nanoseconds spent releasing 1 JDBC connections;
-    498500 nanoseconds spent preparing 2 JDBC statements;
-    2514500 nanoseconds spent executing 2 JDBC statements;
+    580700 nanoseconds spent acquiring 1 JDBC connections;
+    443100 nanoseconds spent releasing 1 JDBC connections;
+    11827500 nanoseconds spent preparing 2 JDBC statements;
+    2317700 nanoseconds spent executing 2 JDBC statements;
     0 nanoseconds spent executing 0 JDBC batches;
     0 nanoseconds spent performing 0 L2C puts;
     0 nanoseconds spent performing 0 L2C hits;
     0 nanoseconds spent performing 0 L2C misses;
-    7501900 nanoseconds spent executing 2 flushes (flushing a total of 2 entities and 0 collections);
+    9383300 nanoseconds spent executing 1 flushes (flushing a total of 2 entities and 0 collections);
     0 nanoseconds spent executing 0 partial-flushes (flushing a total of 0 entities and 0 collections)
 }
-7월 07, 2020 12:03:20 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl$PoolState stop
-INFO: HHH10001008: Cleaning up connection pool [jdbc:postgresql://localhost/basquiat]
-
-
+7월 12, 2020 12:55:16 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl$PoolState stop
+INFO: HHH10001008: Cleaning up connection pool [jdbc:mysql://localhost:3306/basquiat?rewriteBatchedStatements=true&useUnicode=yes&characterEncoding=UTF-8&serverTimezone=Asia/Seoul]
 ```
 
-오호...
+뭐가 문제인가요???? 코드도 깔끔한거 같고 조회도 잘 되었는데요?     
 
-하지만 pgAdmin4에서 
-
-```
-select * from basquiat_item_id_seq;
+맞다. 문제가 없다. 하지만 뭔가가 불합리해 보인다. 만일 쿼리로 한다면 어떻게 할까?    
 
 ```
-를 날리면 실제 시퀀스처럼 작동하고 있는 것을 확인 할 수 있다. 아마도 매커니즘이 다른듯 싶다.     
+SELECT p.*,
+	   c.name,
+       c.ranking
+	FROM player p
+    INNER JOIN club c ON p.club_id = c.id
+```
 
-아무튼 이런 차이점이 있다는 것을 한번 확인하고 넘어간다.     
+![실행이미지](https://github.com/basquiat78/completedJPA/blob/6.unary-relation-mapping/capture/capture2.png)    
 
-앞서서 영속성 컨텍스트에서 우리는 bulk와 관련된 테스트를 한 적이 있다. 당시에는 해당 @Id에 @GenericGenerator와 시퀀스 전략을 활용했는데 @SequenceGenerator을 활용하는 방법도 있다.    
+그냥 한방 쿼리로 모든 것을 조회해 올 수 있다. 그런 면에서 저런 방식은 무언가가 불합리해 보인다는 것이다. 코드의 낭비도 있어 보인다.    
 
-@SequenceGenerator    
+그냥 쿼리처럼 한번에 player를 조회할 때 클럽도 조회해 올 수 없는 거니?    
 
-1. name: 식별자 생성기 이름으로 이것은 시퀀스 전략시 매핑될 이름이기 때문에 필수이다.    
+당연히 있다. 이제부터 그 방법을 배워 볼 것이다.    
 
-2. sequenceName: 데이터베이스에 생성할 시퀀스의 이름으로 설정하지 않으면 기본값으로 hibernate_sequence이다.    
+책에서는 굳이 모든 것을 양방향으로 맺을 필요는 없다고 말한다. 필요하면 그때 가서 양방향 매핑을 해도 무방하다고 말하고 있기 때문에 일단 우리는 단방향을 먼저 고민해 보자.     
 
-3. initialValue: 시퀀스 생성시 최초값으로 보통 1로 잡아둔다. 기본값 1이다.    
+자 그럼 저 위의 예제를 중심으로 설명을 해보자.    
 
-4. allocationSize: 시퀀스를 한 번 호출할때마다 증가하는 수로 일반적으로 1로 잡는다. 잡지 않으면 기본값이 50이다.    
+## @ManyToOne    
 
-5. catalog: catalog 이전 브랜치에서 설명한 것으로 db에 따라 설정할 수 있다.    
+다대일 또는 N:1이라는 표현으로 가장 많이 사용되는 매핑이다.    
 
-6. schema: schema 이전 브랜치에서 설명한 것으로 db에 따라 설정할 수 있다.    
+양방향을 염두해 둔다면 그 반대는 @OneToMany가 될 것이라는 것은 딱 봐도 알 수 있다.    
 
-자 그럼 설정 코드를 한번 보자.    
+이제부터는 다음과 같은 방식으로 사용할 수 있다.    
+
+Player
 
 ```
 package io.basquiat.model;
 
-import java.time.LocalDateTime;
-
-import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
-import javax.persistence.PrePersist;
-import javax.persistence.PreUpdate;
-import javax.persistence.SequenceGenerator;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import lombok.ToString;
 
 /**
@@ -475,223 +423,954 @@ import lombok.ToString;
  *
  */
 @Entity
-@Table(name = "basquiat_item")
+@Table(name = "player")
+@Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@SequenceGenerator(name = "basquiat_item_seq",
-				   sequenceName = "item_sequence",
-				   initialValue = 1, 
-				   allocationSize = 1)
 @ToString
-public class Item {
+public class Player {
 
-	@Id
-	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "basquiat_item_seq")
-	private Long id;
-
-	@Setter
-	@Getter
-	@Column(name = "it_name")
-	private String name;
-
-	@Setter
-	@Getter
-	@Column(name = "it_price")
-	private Integer price;
-
-	@Setter
-	@Getter
-	private BadgeType badge;
-	
-	private LocalDateTime createdAt;
-	
-	private LocalDateTime updatedAt;
-	
 	@Builder
-	public Item(String name, Integer price, BadgeType badge) {
-		this.price = price;
+	public Player(String name, int age, String position, Club club) {
 		this.name = name;
-		this.badge = badge;
+		this.age = age;
+		this.position = position;
+		this.club = club;
 	}
 
+	/** 선수 아이디 */
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+	
+	/** 선수 명 */
+	private String name;
+	
+	/** 선수 나이 */
+	private int age;
 
-	/** insert할때 현재 시간으로 인서트한다. */
-    @PrePersist
-    protected void setUpCreatedAt() {
-    	createdAt = LocalDateTime.now();
-    }
+	/** 선수 포지션 */
+	private String position;
+	
+	/** 선수가 속한 클럽 객체 */
+	@ManyToOne
+	@JoinColumn(name = "club_id")
+	private Club club;
+	
+}
+```
 
-    /** update 이벤트가 발생시에 업데이트된 시간으로 update */
-    @PreUpdate
-    protected void onUpdate() {
-    	updatedAt = LocalDateTime.now();
+잘 보면 기존에는 클럽의 아이디를 필드로 가지고 있었는데 지금은 Club이라는 객체를 가지게 된다.    
+
+특이점은 @JoinColumn이다. Club 엔티티가 정확하게 작성되어 있다면 Player입장에서는 Club의 pk를 알 수 있다.    
+
+다시 위에 이미지인 Player와 Club의 erd 이미지를 다시 보게 되면 Player의 fk는 club_id로 잡혀있다. 바로 이 JoinColumn의 name은 Player테이블이 가지게 되는 club_id임을 알 수 있다.     
+
+이 경우에는 @JoinColumn을 명시하지 않아도 기본값으로 설정된다.    
+
+그럼 그냥 JPA를 통해 DDL을 생성하게 되면 어떻게 될까?     
+
+DDL을 생성하면 erd와 똑같이 테이블이 생성된 것을 확인 할 수 있다.    
+
+```
+package io.basquiat;
+
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.EntityTransaction;
+import javax.persistence.Persistence;
+
+import io.basquiat.model.Club;
+import io.basquiat.model.Player;
+
+/**
+ * 
+ * created by basquiat
+ *
+ */
+public class jpaMain {
+
+    public static void main(String[] args) {
+        EntityManagerFactory emf = Persistence.createEntityManagerFactory("basquiat");
+        EntityManager em = emf.createEntityManager();
+        EntityTransaction tx = em.getTransaction();
+        tx.begin();
+        try {
+        	// 1. 내가 들어가고 싶은 팀이 무엇인지 살펴본다.
+        	Club tottenhamFootballClub = Club.builder().name("Tottenham Hotspur Football Club")
+        											   .ranking(9)
+        											   .build();
+        	em.persist(tottenhamFootballClub);
+        	System.out.println("기본키 매핑은 Identity다. 그래서 쿼리 날아감.");
+        	
+        	// 2. 손흥민이 토트넘으로 들어간다.
+        	Player son = Player.builder().name("손흥민")
+        								 .age(27)
+        								 .position("Striker")
+        								 .club(tottenhamFootballClub)
+        								 .build();
+        	em.persist(son);
+        	System.out.println("기본키 매핑은 Identity다. 그래서 쿼리 날아감.");
+        	tx.commit();
+        } catch(Exception e) {
+            tx.rollback();
+        } finally {
+            em.close();
+        }
+        emf.close();
     }
+    
+}
+
+```
+
+이제는 클럽의 아이디가 아닌 엔티티 객체 자체를 세팅해서 실행해 보자. 여기까지는 기존과 다를 바 없다. 단지 Club에서 아이디를 꺼내와서 세팅하는 것이 아닌 그냥 객체 자체를 세팅한다.    
+
+그리고 이제 조회를 해보자.     
+
+```
+package io.basquiat;
+
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.EntityTransaction;
+import javax.persistence.Persistence;
+
+import io.basquiat.model.Player;
+
+/**
+ * 
+ * created by basquiat
+ *
+ */
+public class jpaMain {
+
+    public static void main(String[] args) {
+        EntityManagerFactory emf = Persistence.createEntityManagerFactory("basquiat");
+        EntityManager em = emf.createEntityManager();
+        EntityTransaction tx = em.getTransaction();
+        tx.begin();
+        try {
+        	
+        	Player son = em.find(Player.class, 1L);
+        	System.out.println(son);
+        	tx.commit();
+        } catch(Exception e) {
+            tx.rollback();
+        } finally {
+            em.close();
+        }
+        emf.close();
+    }
+    
+}
+
+```
+
+Club를 조회하는 코드가 없는데요?     
+
+하지만 결과를 보면 어떻까?
+
+
+```
+Hibernate: 
+    select
+        player0_.id as id1_3_0_,
+        player0_.age as age2_3_0_,
+        player0_.club_id as club_id5_3_0_,
+        player0_.name as name3_3_0_,
+        player0_.position as position4_3_0_,
+        club1_.id as id1_2_1_,
+        club1_.name as name2_2_1_,
+        club1_.ranking as ranking3_2_1_ 
+    from
+        player player0_ 
+    left outer join
+        club club1_ 
+            on player0_.club_id=club1_.id 
+    where
+        player0_.id=?
+Player(id=1, name=손흥민, age=27, position=Striker, club=Club(id=1, name=Tottenham Hotspur Football Club, ranking=9))
+```
+
+오호라? Club의 정보까지 한번에 가져왔다는 것을 알 수 있다.    
+
+자 그럼 위에서 언급했던 @JoinColumn에 대해서 좀 알아보자.    
+
+### @JoinColumn    
+
+1. name: 매핑할 외래 키 이름이다. 보통은 명시적으로 쓰긴 한다. 하지만 설정을 하지 않게된다면 이것은 필드명 (club)_대상테이블(Club에 설정된 pk), 즉 club_id가 된다.     
+
+2. referencedColumnName:  외래 키가 참조하는 대상 테이블의 컬럼명이라고 하는데 이것은 @EmbeddedId에서 언급할 것이다. 기본값으로는 참조하는 테이블의 기본키 컬럼명이다.     
+
+3. foreignKey: 외래 키 제약조건을 직접 지정한다. DDL에만 관여하는 녀석으로 유니크 제약 조건처럼 값을 설정하지 않으면 랜덤키 조합 방식으로 자동생성된다.    
+
+4. @Column의 속성값들 기본적으로 포함한다. (unique, nullable, insertable, updatable, columnDefinition, table)     
+
+
+## @OneToMany     
+
+개인적으로 이해가 되지 않는 JPA에서 제공하는 표준 스펙이다. 책에서도 잘 사용하지 않는다고 하는데 그 이유는 운영상에 문제가 있다는 것이다.    
+
+사실 1:N라고 표현하지만 실제 erd는 손을 대지 않는다.     
+
+사실 database입장에서는 외래키는 다쪽, 그러니깐 Player쪽에 있어야 한다.    
+
+하지만 객체 입장에서는 역으로 생각해 볼 수 있다. 즉 Player입장에서는 클럽 정보를 알고 싶지 않은 경우를 의미한다.    
+
+연관관계 대상이 변경되었기 때문에 엔티티를 다시 정의하자.    
+
+Player
+
+```
+package io.basquiat.model;
+
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Table;
+
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+
+/**
+ * 
+ * created by basquiat
+ *
+ */
+@Entity
+@Table(name = "player")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@ToString
+public class Player {
+
+	@Builder
+	public Player(String name, int age, String position) {
+		this.name = name;
+		this.age = age;
+		this.position = position;
+	}
+
+	/** 선수 아이디 */
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+	
+	/** 선수 명 */
+	private String name;
+	
+	/** 선수 나이 */
+	private int age;
+
+	/** 선수 포지션 */
+	private String position;
 	
 }
 
 ```
 
-이 코드를 먼저 살펴보자.
+Club
 
 ```
-@Id
-@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "basquiat_item_seq")
-private Long id;
+package io.basquiat.model;
 
-```
-GeneratedValue의 전략은 시퀀스이고 generator의 값이 basquiat_item_seq이다 이 generator의 값은 다음 코드를 보면 알 수 있다.
+import java.util.ArrayList;
+import java.util.List;
 
-```
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToMany;
+import javax.persistence.Table;
 
-@SequenceGenerator(name = "basquiat_item_seq",
-				   sequenceName = "item_sequence",
-				   initialValue = 1, 
-				   allocationSize = 1)
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
 
-```
+/**
+ * 
+ * created by basquiat
+ *
+ */
+@Entity
+@Table(name = "club")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@ToString
+public class Club {
 
-즉, SequenceGenerator의 이름과 같은 것을 알 수 있는데 바로 이와 매핑되게 된다.     
+	@Builder
+	public Club(String name, int ranking, List<Player> players) {
+		this.name = name;
+		this.ranking = ranking;
+		this.players = players;
+	}
 
-실제로 디비를 보면 sequenceName의 값으로 생성된 시퀀스를 확인 할 수 있으며 최초 1값으로 인서트 쿼리를 날릴 때마다 allocationSize에 설정한 수만큼 늘어나게 된다.    
-
-특히 이것은 batch에서 최적화를 위해 사용되어지는데 지금까지 테스트해온 로그들을 분석해 보면 잘 알 수 있다.
-
-배치를 하든 뭐를 하든 PK를 따기 위해서는 그만큼 디비를 왔다갔다하면서 시퀀스에서 아이디를 받아와야 한다.    
-
-그 수가 빈번하면 성능저하를 우려할 수 있다. 당연한 이야기이다.     
-
-그래서 그것을 한번에 미리 저 수만큼 받아서 메모리에서 사용하는 방식을 사용하는 것이다.     
-
-이것을 입코딩으로 한번 설명해 보겠다.
-
-
-```
-나는 총 10개의 배치성 인서트 쿼리를 만들게 될거 같아. 그래서 10번 왔다 갔다 하는것보다는 일단 시퀀스에서 초기값을 보고 allocationSize만큼 증가시킨 이후에 그 증가된 아이디갯수만큼 내 메모리에 올려두겠어.
-
-
-예를 들면 총 10개니깐 일단 시퀀스에 가서 확인해 보니 4네? 그럼 50을 더해서 5부터 50을 더해서 5~55만큼 확보를 하자구? 이해됬지?
-
-그리고 총 10개니깐 5,6,7,8,9,10,11,12,13,14 뭐 이렇게 설정하지 뭐.
-
-그리고 트랜잭션이 종료되면? 뭐 어째겠어 나머지는 그냥 날아가는거지.
-
-```
-
-단점이라고 한다면 id값이 중간에 붕 뜨는 그런 현상이 생길 수 있다.
-
-```
-id   badge		createdAt							name		price
-303		3		"2020-07-09 01:42:12.803"	"Fodera"	15000000	
-353		3		"2020-07-09 01:42:12.804"	"Fodera"	15000000	
-354		3		"2020-07-09 01:43:12.26"		"Fodera"	15000000	
-355		3		"2020-07-09 01:43:12.278"	"Fodera"	15000000	
-356		3		"2020-07-09 01:43:12.278"	"Fodera"	15000000	
-404		3		"2020-07-09 01:45:09.501"	"Fodera"	15000000	
-405		3		"2020-07-09 01:45:09.525"	"Fodera"	15000000	
-406		3		"2020-07-09 01:45:09.525"	"Fodera"	15000000	
-
-```
-
-그런데 아쉽게도 postgres에서는 그냥 설정만 하면 오류가 발생한다.
-
-테스트로 allocationSize값을 1이 아닌 다른 값으로 변경하게 되면 다음과 같은 에러 로그를 마주하게 된다.     
-
-```
-Caused by: org.hibernate.MappingException: The increment size of the [item_sequence] sequence is set to [3] in the entity mapping while the associated database sequence increment size is [1].
+	/** 클럽 아이디 */
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+	
+	/** 클럽 명 */
+	private String name;
+	
+	/** 클럽 랭킹 순위 */
+	private int ranking;
+	
+	@OneToMany
+	@JoinColumn(name = "club_id")
+	List<Player> players = new ArrayList<>();
+	
+}
 
 ```
 
-기본적으로 1로 설정되어 있기 때문이다.    
+좀 독특하게 Player쪽에는 fk가 전혀 없다. 그리고 Club쪽에 @OneToMany로 설정하고 @JoinColumn의 name을 club_id로 설정했다.     
 
-그래서 postgres의 경우에는 해당 시퀀스를 alter를 통해서 해당 옵션을 변경시켜줘야 한다.
+특히 이 경우에는 @JoinColumn을 생략하면 조인 테이블을 생성하는 전략을 사용하게 된다. 일단 이거는 뒤에 가서 확인해 보고 이렇게 했는데도 테이블을 생성하면 기존의 erd와 똑같이 테이블이 생성된다.    
 
-하지만 좀 불편한게 이 사이즈와 디비에 설정된 값이 다르면 이런 오류를 내기 때문에 설정 초기에 적절한 값 세팅을 해줘야 한다.
+다만 이럴 경우는 관계가 역전되어진 상황이기 때문에 내부적으로 돌아가는 방식도 좀 특이하다.     
 
-```
-
-ALTER SEQUENCE item_sequence INCREMENT BY 50 (allocationSize you want);
+주절이 말로 하면 좀 어려우니 코드와 결과를 보고 고민해 보자.     
 
 ```
+package io.basquiat;
 
-위와 같이 해당 시퀀스의 increment의 값을 변경해주고 테스트해보시기 바란다.
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.EntityTransaction;
+import javax.persistence.Persistence;
 
-사실 나는 이 방법도 불합리하다고 생각한다. 예를 들면 이런 방식을 채택할 수 있었을텐데 
+import io.basquiat.model.Club;
+import io.basquiat.model.Player;
 
-pseudo code로 표현하자면
+/**
+ * 
+ * created by basquiat
+ *
+ */
+public class jpaMain {
 
-```
-List<Entity> list = Arrays.asList(entity1, entity2, entity3)
-em.persistBatch(list)
+    public static void main(String[] args) {
+        EntityManagerFactory emf = Persistence.createEntityManagerFactory("basquiat");
+        EntityManager em = emf.createEntityManager();
+        EntityTransaction tx = em.getTransaction();
+        tx.begin();
+        try {
+        	
+        	// 1. 손흥민은 축구 선수이다.
+        	Player son = Player.builder().name("손흥민")
+					        			 .age(27)
+					        			 .position("Striker")
+					        			 .build();
+        	em.persist(son);
 
-```
-
-뭐 대충 저렇게 리스트로 받고 시퀀스에서 id 따올때 저 숫자만큼 증가시켜서 가져오면 참 좋지 않을까 하는? 뭐 그런 생각들... 뭐 문제가 있고 저 방식이 더 불합리해서 없는건지도 모르겠다.     
-
-암튼 시퀀스 전략은 심플하기 때문에 간략하게 알아봤다.
-
-## TABLE Strategy    
-
-테이블 전략을 쓰는 이유는 단 하나이다. 일단 DB의 특성과는 상관없이 테이블을 생성해서 테이블을 대상으로 시퀀스를 가져오고 증가시키는 방식이다.    
-
-말 그대로 장점이라고 하면 어떤 DB에서든 사용할 수 있으며 또한 여러개의 시퀀스를 생성하지도 않고 테이블 하나에 대상 테이블의 시퀀스를 가질 수 있다.     
-
-내가 첫 입사한 회사에서는 바로 이 테이블 전략을 통해서 시퀀스를 생성했었고 그 안에는 무수한 테이블들의 시퀀스를 관리하는 방식이었다.    
-
-이게 무슨말이냐면 만일 A라는 테이블과 B라는 테이블이 있다고 가정하자.
-
-그리고 테이블을 하나 생성한다.    
-
-대충 컬럼이 table_seq, next_val이라는 컬럼을 두어서 table_seq에서는 어떤 테이블의 시퀀스인지 값을 넣고 next_val을 관리하는 것이다.    
-
-대충 a_seq, b_seq같은 느낌으로?    
-
-일단 무엇이 있는지 살펴보자.     
-
-###@TableGenerator
-
-1. name: 식별자 생성기 이름으로 어느 generatValue에서 지정할 값이기 때문에 당연히 필수이다.    
+        	// 2. 토트넘이 손흥민 선수를 영입했다. 
+        	Club tottenhamFootballClub = Club.builder().name("Tottenham Hotspur Football Club")
+        											   .ranking(9)
+        											   .build();
+        	tottenhamFootballClub.getPlayers().add(son);
+        	em.persist(tottenhamFootballClub);
+        	tx.commit();
+        } catch(Exception e) {
+            tx.rollback();
+        } finally {
+            em.close();
+        }
+        emf.close();
+    }
     
-2. table: 생성할 테이블명으로 설정하지 않으면 기본값이 hibernate_sequences이다.    
+}
 
-3. pkColumnName: 시퀀스 컬럼명이다. 설정하지 않으면 기본값으로 sequence_name이다.    
+```
 
-4. valueColumnName: 시퀀스를 담을 컬럼명이다. 설정하지 않으면 기본값으로 next_val이다.    
+입으로 설명하자면 이것도 상당히 합리적인것처럼 보이긴 한다. 로직의 흐름 자체가 손흥민 선수를 토트넘이 손흥민을 영입한 모양새를 띄고 있기 때문이다.
+    
+하지만 토트넘이 손흥민을 영입하는 코드 자체가 뭔가 부자연스럽다.     
 
-5. pkColumnValue: 키로 사용할 값으로 대략 {table name}_seq같은 형식을 지정한다. 설정하지 않으면 엔티티명으로 지정된다.    
+그럼 결과를 보자.
 
-6. initialValue: 시퀀스 생성시 최초값, 기본값은 0이다.    
+```
+Hibernate: 
+    /* insert io.basquiat.model.Player
+        */ insert 
+        into
+            player
+            (age, name, position) 
+        values
+            (?, ?, ?)
+Hibernate: 
+    /* insert io.basquiat.model.Club
+        */ insert 
+        into
+            club
+            (name, ranking) 
+        values
+            (?, ?)
+Hibernate: 
+    /* create one-to-many row io.basquiat.model.Club.players */ update
+        player 
+    set
+        club_id=? 
+    where
+        id=?
 
-7. allocationSize: 시퀀스 한 번 호출에 증가하는 수로 기본값이  50이다. 시퀀스 전략과 동일하다.     
+```
 
-8. catalog, schema: 이번 영속성 컨텍스트 관련 내용과 동일하다. DB특성에 따라 사용할 수 있다.        
+'어라? 근데 업데이트는 뭐지?'라는 생각이 들게 된다.     
 
-9. uniqueConstraints: 유니크 제약 조건을 거는 것으로 DDL 생성시에만 관여하는 녀석이다.    
+당연하게도 JPA는 테이블의 연관관계를 객체로 추상화하는 과정에서 약간은 좀 억지로 끼워 맞춘 듯한 느낌도 살짝 든다. 아무래도 그 테이블과 객체와의 간극이 분명이 존재하기 때문인데 그런 관점에서 보자면 이것은 어찌보면 필연적인 것이다.     
+
+테이블의 erd의 모양새와는 좀 다르게 맵핑된 이 경우에는 손흥민를 클럽에서 영입을 했다. 그리고 나서 언론이나 신문사에 대대적으로 기사를 날릴 것이다.    
+
+'토트넘! 손흥민 영입'     
+
+그럼 이것을 객체의 관점이 아닌 데이터베이스의 관점에서 보자면 손흥민에 대한 선수 정보는 토트넘에 영입되기 전에는 '바이어 레버쿠젠'에 소속되어 있었기 때문에 Club입장에서는 손흥민을 영입했으니 손흥민의 소속팀 정보를 갱신해야 하는 것이다.    
+
+따라서 1:N 매핑을 시도한 JPA에서는 이 간극을 좁히기 위해 결국 DB에 손흥민의 정보에서 club_id를 갱신하는 쿼리를 날릴 수 밖에 없다.   
+
+결국 이 전략은 외래키가 대상 테이블에 존재하면서 생기는 단점으로 꼽는다.      
+
+책에서는 그래서 N:1 맵핑을 중심으로 이런 부분은 양방향으로 풀라고 권장하고 있다.    
+
+어째든 1:N에 대해서 알아봤다.    
+
+## @OneToOne     
+
+1:1 매핑에 대해서 알아보자.     
+
+지금 예제를 이어가보자. 선수는 물리적인 정보들 외에 연봉 정보와 국적, 취미등 외적인 정보를 담는 일종의 PlayerInformation객체를 가질 수 있다.     
+
+이런 경우라면 Player와 PlayerInformation의 관계는 1:1임을 알 수 있다.     
+
+또는 선수가 사용할 수 있는 락커를 예로 들수도 있겠다.        
+
+물론 한 선수가 1개 이상의 락커를 쓸 수도 있겠지만 일반적으로 선수 한명당 하나의 락커를 소유하게 된다.    
+
+실무의 예를 들면 Item, 즉 상품의 기본적인 정보들 외에도 상품에 걸려있는 정책이나 배송정책들이 상품마다 다 다를 수 있기 때문에 Item_policy, Item_Delivery같은 1:1로 매핑되는 테이블이 존재하기도 한다.    
+
+다시 우리는 예제로 돌아가서 가장 흔하게 예를 드는 락커에 포커스를 맞추자.    
+
+그러면 이런 고민이 들 것이다. 외래키는 어디에 있어야 하는가?    
+
+이 경우에는 락커에 선수 아이디를 외래키로 가질 수 있고 아니면 선수가 락커 아이디를 외래키로 가질 수 있다.     
+
+이것은 비지니스에 따라 달라질 것이다.    
+
+하지만 보통은 선수를 검색했을 때 락커의 정보, 클럽의 정보를 가져오는게 더 합리적이지 않을까? 물론 이 생각은 어플리케이션을 어떻게 해야하느냐에 따라서 달라질 것이다.     
+
+보통은 DBA가 있다면 정할 수 있지만 만일 내가 해야 한다면 어떻게 할까? 내 입장에서는 선수쪽에 락커 아이디를 외래키로 있는게 더 나아 보인다.    
+
+![실행이미지](https://github.com/basquiat78/completedJPA/blob/6.unary-relation-mapping/capture/capture3.png)    
+
+하지만 이건 어디까지나 나의 생각이다. 선택지일뿐 답은 없을 뿐더러 차후 배울 양방향 매핑으로 걸어버리면 끝날 일이다. 그러나 뒤에서 이와 관련 설명을 다시 한번 해볼것이다.    
+
+일단 Locker를 만들자.     
+
+Locker
+
+```
+package io.basquiat.model;
+
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Table;
+
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+
+/**
+ * 
+ * created by basquiat
+ *
+ */
+@Entity
+@Table(name = "locker")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@ToString
+public class Locker {
+
+	@Builder
+	public Locker(String name, String position) {
+		this.name = name;
+		this.position = position;
+	}
+	
+	/** 락커 아이디 */
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+	
+	/** 락커 이름 */
+	private String name;
+
+	/** 락커가 있는 위치 정보 */
+	private String position;
+}
+
+```
+
+Player
+
+```
+package io.basquiat.model;
+
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+
+/**
+ * 
+ * created by basquiat
+ *
+ */
+@Entity
+@Table(name = "player")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@ToString
+public class Player {
+
+	@Builder
+	public Player(String name, int age, String position, Club club, Locker locker) {
+		this.name = name;
+		this.age = age;
+		this.position = position;
+		this.club = club;
+		this.locker = locker;
+	}
+
+	/** 선수 아이디 */
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+	
+	/** 선수 명 */
+	private String name;
+	
+	/** 선수 나이 */
+	private int age;
+
+	/** 선수 포지션 */
+	private String position;
+	
+	@ManyToOne
+	@JoinColumn(name = "club_id")
+	private Club club;
+	
+	@OneToOne
+	@JoinColumn(name = "locker_id")
+	private Locker locker;
+	
+}
+
+```
+
+그럼 한번 코드를 실행해 보자.
+
+```
+
+package io.basquiat;
+
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.EntityTransaction;
+import javax.persistence.Persistence;
+
+import io.basquiat.model.Club;
+import io.basquiat.model.Locker;
+import io.basquiat.model.Player;
+
+/**
+ * 
+ * created by basquiat
+ *
+ */
+public class jpaMain {
+
+    public static void main(String[] args) {
+        EntityManagerFactory emf = Persistence.createEntityManagerFactory("basquiat");
+        EntityManager em = emf.createEntityManager();
+        EntityTransaction tx = em.getTransaction();
+        tx.begin();
+        try {
+        	
+        	// 1. 내가 들어가고 싶은 팀이 무엇인지 살펴본다.
+        	Club tottenhamFootballClub = Club.builder().name("Tottenham Hotspur Football Club")
+        											   .ranking(9)
+        											   .build();
+        	em.persist(tottenhamFootballClub);
+
+        	Locker sonsLocker = Locker.builder().name("손흥민의 락커")
+        										.position("입구에서 4번째 위치")
+        										.build();
+        	em.persist(sonsLocker);
+        	
+        	// 2. 손흥민이 토트넘으로 들어간다.
+        	Player son = Player.builder().name("손흥민")
+        								 .age(27)
+        								 .position("Striker")
+        								 .club(tottenhamFootballClub)
+        								 .locker(sonsLocker)
+        								 .build();
+        	em.persist(son);
+        	tx.commit();
+        } catch(Exception e) {
+            tx.rollback();
+        } finally {
+            em.close();
+        }
+        emf.close();
+    }
+    
+}
+
+```
+
+결과는 뭐 안봐도 비디오    
+
+```
+7월 13, 2020 12:23:12 오전 org.hibernate.jpa.internal.util.LogHelper logPersistenceUnitInformation
+INFO: HHH000204: Processing PersistenceUnitInfo [name: basquiat]
+7월 13, 2020 12:23:12 오전 org.hibernate.Version logVersion
+INFO: HHH000412: Hibernate ORM core version 5.4.17.Final
+7월 13, 2020 12:23:13 오전 org.hibernate.annotations.common.reflection.java.JavaReflectionManager <clinit>
+INFO: HCANN000001: Hibernate Commons Annotations {5.1.0.Final}
+7월 13, 2020 12:23:14 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl configure
+WARN: HHH10001002: Using Hibernate built-in connection pool (not for production use!)
+7월 13, 2020 12:23:14 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl buildCreator
+INFO: HHH10001005: using driver [com.mysql.cj.jdbc.Driver] at URL [jdbc:mysql://localhost:3306/basquiat?rewriteBatchedStatements=true&useUnicode=yes&characterEncoding=UTF-8&serverTimezone=Asia/Seoul]
+7월 13, 2020 12:23:14 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl buildCreator
+INFO: HHH10001001: Connection properties: {user=basquiat, password=****}
+7월 13, 2020 12:23:14 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl buildCreator
+INFO: HHH10001003: Autocommit mode: false
+7월 13, 2020 12:23:14 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl$PooledConnections <init>
+INFO: HHH000115: Hibernate connection pool size: 20 (min=1)
+7월 13, 2020 12:23:15 오전 org.hibernate.dialect.Dialect <init>
+INFO: HHH000400: Using dialect: org.hibernate.dialect.MySQL5InnoDBDialect
+Hibernate: 
+    
+    alter table player 
+       drop 
+       foreign key FKh60stqlv4r5dk5hp5gcwvo0n7
+7월 13, 2020 12:23:16 오전 org.hibernate.resource.transaction.backend.jdbc.internal.DdlTransactionIsolatorNonJtaImpl getIsolatedConnection
+INFO: HHH10001501: Connection obtained from JdbcConnectionAccess [org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator$ConnectionProviderJdbcConnectionAccess@28952dea] for (non-JTA) DDL execution was not in auto-commit mode; the Connection 'local transaction' will be committed and the Connection will be set into auto-commit mode.
+Hibernate: 
+    
+    alter table player 
+       drop 
+       foreign key FKdh2ff6dcjjgupccm2pmddouhw
+Hibernate: 
+    
+    drop table if exists club
+Hibernate: 
+    
+    drop table if exists locker
+Hibernate: 
+    
+    drop table if exists player
+Hibernate: 
+    
+    create table club (
+       id bigint not null auto_increment,
+        name varchar(255),
+        ranking integer not null,
+        primary key (id)
+    ) engine=InnoDB
+7월 13, 2020 12:23:16 오전 org.hibernate.resource.transaction.backend.jdbc.internal.DdlTransactionIsolatorNonJtaImpl getIsolatedConnection
+INFO: HHH10001501: Connection obtained from JdbcConnectionAccess [org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator$ConnectionProviderJdbcConnectionAccess@9f6e406] for (non-JTA) DDL execution was not in auto-commit mode; the Connection 'local transaction' will be committed and the Connection will be set into auto-commit mode.
+Hibernate: 
+    
+    create table locker (
+       id bigint not null auto_increment,
+        name varchar(255),
+        position varchar(255),
+        primary key (id)
+    ) engine=InnoDB
+Hibernate: 
+    
+    create table player (
+       id bigint not null auto_increment,
+        age integer not null,
+        name varchar(255),
+        position varchar(255),
+        club_id bigint,
+        locker_id bigint,
+        primary key (id)
+    ) engine=InnoDB
+Hibernate: 
+    
+    alter table player 
+       add constraint FKh60stqlv4r5dk5hp5gcwvo0n7 
+       foreign key (club_id) 
+       references club (id)
+Hibernate: 
+    
+    alter table player 
+       add constraint FKdh2ff6dcjjgupccm2pmddouhw 
+       foreign key (locker_id) 
+       references locker (id)
+7월 13, 2020 12:23:16 오전 org.hibernate.engine.transaction.jta.platform.internal.JtaPlatformInitiator initiateService
+INFO: HHH000490: Using JtaPlatform implementation: [org.hibernate.engine.transaction.jta.platform.internal.NoJtaPlatform]
+Hibernate: 
+    /* insert io.basquiat.model.Club
+        */ insert 
+        into
+            club
+            (name, ranking) 
+        values
+            (?, ?)
+Hibernate: 
+    /* insert io.basquiat.model.Locker
+        */ insert 
+        into
+            locker
+            (name, position) 
+        values
+            (?, ?)
+Hibernate: 
+    /* insert io.basquiat.model.Player
+        */ insert 
+        into
+            player
+            (age, club_id, locker_id, name, position) 
+        values
+            (?, ?, ?, ?, ?)
+7월 13, 2020 12:23:16 오전 org.hibernate.engine.internal.StatisticalLoggingSessionEventListener end
+INFO: Session Metrics {
+    426000 nanoseconds spent acquiring 1 JDBC connections;
+    413700 nanoseconds spent releasing 1 JDBC connections;
+    15898000 nanoseconds spent preparing 3 JDBC statements;
+    6655000 nanoseconds spent executing 3 JDBC statements;
+    0 nanoseconds spent executing 0 JDBC batches;
+    0 nanoseconds spent performing 0 L2C puts;
+    0 nanoseconds spent performing 0 L2C hits;
+    0 nanoseconds spent performing 0 L2C misses;
+    7436200 nanoseconds spent executing 1 flushes (flushing a total of 3 entities and 0 collections);
+    0 nanoseconds spent executing 0 partial-flushes (flushing a total of 0 entities and 0 collections)
+}
+7월 13, 2020 12:23:16 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl$PoolState stop
+INFO: HHH10001008: Cleaning up connection pool [jdbc:mysql://localhost:3306/basquiat?rewriteBatchedStatements=true&useUnicode=yes&characterEncoding=UTF-8&serverTimezone=Asia/Seoul]
+
+```
+
+옵션을 none으로 두고 셀렉트를 한번 해보게 되면
+
+```
+Player son = em.find(Player.class, 1L);
+System.out.println(son.toString());
+
+```
+
+결과는 
+
+```
+7월 13, 2020 12:25:25 오전 org.hibernate.jpa.internal.util.LogHelper logPersistenceUnitInformation
+INFO: HHH000204: Processing PersistenceUnitInfo [name: basquiat]
+7월 13, 2020 12:25:25 오전 org.hibernate.Version logVersion
+INFO: HHH000412: Hibernate ORM core version 5.4.17.Final
+7월 13, 2020 12:25:25 오전 org.hibernate.annotations.common.reflection.java.JavaReflectionManager <clinit>
+INFO: HCANN000001: Hibernate Commons Annotations {5.1.0.Final}
+7월 13, 2020 12:25:26 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl configure
+WARN: HHH10001002: Using Hibernate built-in connection pool (not for production use!)
+7월 13, 2020 12:25:26 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl buildCreator
+INFO: HHH10001005: using driver [com.mysql.cj.jdbc.Driver] at URL [jdbc:mysql://localhost:3306/basquiat?rewriteBatchedStatements=true&useUnicode=yes&characterEncoding=UTF-8&serverTimezone=Asia/Seoul]
+7월 13, 2020 12:25:26 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl buildCreator
+INFO: HHH10001001: Connection properties: {user=basquiat, password=****}
+7월 13, 2020 12:25:26 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl buildCreator
+INFO: HHH10001003: Autocommit mode: false
+7월 13, 2020 12:25:26 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl$PooledConnections <init>
+INFO: HHH000115: Hibernate connection pool size: 20 (min=1)
+7월 13, 2020 12:25:27 오전 org.hibernate.dialect.Dialect <init>
+INFO: HHH000400: Using dialect: org.hibernate.dialect.MySQL5InnoDBDialect
+7월 13, 2020 12:25:28 오전 org.hibernate.engine.transaction.jta.platform.internal.JtaPlatformInitiator initiateService
+INFO: HHH000490: Using JtaPlatform implementation: [org.hibernate.engine.transaction.jta.platform.internal.NoJtaPlatform]
+Hibernate: 
+    select
+        player0_.id as id1_2_0_,
+        player0_.age as age2_2_0_,
+        player0_.club_id as club_id5_2_0_,
+        player0_.locker_id as locker_i6_2_0_,
+        player0_.name as name3_2_0_,
+        player0_.position as position4_2_0_,
+        club1_.id as id1_0_1_,
+        club1_.name as name2_0_1_,
+        club1_.ranking as ranking3_0_1_,
+        locker2_.id as id1_1_2_,
+        locker2_.name as name2_1_2_,
+        locker2_.position as position3_1_2_ 
+    from
+        player player0_ 
+    left outer join
+        club club1_ 
+            on player0_.club_id=club1_.id 
+    left outer join
+        locker locker2_ 
+            on player0_.locker_id=locker2_.id 
+    where
+        player0_.id=?
+Player(id=1, name=손흥민, age=27, position=Striker, club=Club(id=1, name=Tottenham Hotspur Football Club, ranking=9), locker=Locker(id=1, name=손흥민의 락커, position=입구에서 4번째 위치))
+7월 13, 2020 12:25:28 오전 org.hibernate.engine.internal.StatisticalLoggingSessionEventListener end
+INFO: Session Metrics {
+    526400 nanoseconds spent acquiring 1 JDBC connections;
+    421700 nanoseconds spent releasing 1 JDBC connections;
+    12557400 nanoseconds spent preparing 1 JDBC statements;
+    1784200 nanoseconds spent executing 1 JDBC statements;
+    0 nanoseconds spent executing 0 JDBC batches;
+    0 nanoseconds spent performing 0 L2C puts;
+    0 nanoseconds spent performing 0 L2C hits;
+    0 nanoseconds spent performing 0 L2C misses;
+    8766800 nanoseconds spent executing 1 flushes (flushing a total of 3 entities and 0 collections);
+    0 nanoseconds spent executing 0 partial-flushes (flushing a total of 0 entities and 0 collections)
+}
+7월 13, 2020 12:25:28 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl$PoolState stop
+INFO: HHH10001008: Cleaning up connection pool [jdbc:mysql://localhost:3306/basquiat?rewriteBatchedStatements=true&useUnicode=yes&characterEncoding=UTF-8&serverTimezone=Asia/Seoul]
+
+```
+
+책에서는 1:1과 관련해서 많은 이야기들을 하고 있다.    
+
+특히 이런 관계에서 외래키를 어디에 두고 매핑을 하냐에 대한 부분인데 둘다 장단점을 이야기하고 있다.    
+
+간략하게 위 예제로 설명하자면 다음과 같다.    
+
+1. Player가 외래키를 관리할 때    
+	- Player만 조회해도 Locker정보를 함께 가져올 수 있다. 즉 JPA입장에서 매핑하기가 편하다.
+	- 하지만 단점으로는 만일 Locker가 없다면 (예를 들면 새로 영입되서 아직 Locker가 배정되지 않는 상황을 생각해보자.) 해당 locker_id는 null을 허용해야 한다.    
+
+2. Locker가 외래키를 관리할 때    
+	- 1:1 매핑이 깨질경우. 위에서 언급했던 선수가 1개 이상의 락커를 사용할수 있게 변경되었을 때 테이블을 변경하지 않아도 된다.    
+	- 단점으로는 차후 뒤에서 배울 lazy옵션을 걸어도 eager방식으로 작동하게 된다.    
+	
+	
+이 이야기는 사실 DBA관점, 개발자의 관점에 대한 부분이다.    
+
+만일 DBA가 존재한다면 이 부분에 대해서 많은 이야기를 해야한다는 것이다.    
+
+특히 나는 locker_id에 null을 허용해야 하는게 단점이라는 것일 이해하지 못했다.       
+
+하지만 DB입장에서는 그게 부담이 되는 모양이다.    
+
+암튼 이것은 그냥 넘어가자. 난 DBA가 아니라서....     
 
 
-자 그럼 다음과 같이 세팅을 하자.
+## @ManyToMany    
+
+일단 책에서는 JPA의 표준스펙이긴 하지만 실무에서 사용하는 것을 권장하지 않는다.    
+
+이것은 잘 생각해보면 알 수 있는데 DB관점에서 테이블을 두고 생각하면 정규화된 (pk, fk) 테이블애서는 말이 안되는 관계이기 때문이다.     
+
+하지만 의외로 커머스에서는 이런 관계를 생각해 볼 수 있다.    
+
+예를 들면 고객은 여러개의 상품을 선택해서 주문할 수 있고 상품 역시 여러 명의 고객들의 주문에 속할 수 있다.        
+
+그래서 보통 이것들을 해소하기 위해 매핑하는 테이블이 중간에 껴 있다는 것을 알 수 있다.    
+
+디비관점에서는 그렇다는 것이고 객체 관점에서는 사용자는 상품의 리스트를 가질 수 있고 상품 역시 자신을 구입하거나 장바구니에 담은 고객의 리스트를 가질 수 있다.    
+
+그렇다면 @ManyToMany는 중간에 어떤 테이블을 생성해서 1:N, N:1로 서로 연결될 것이라는 것을 알 수 있다.    
+
+일단 한번 코딩으로 해보자.    
+
+Member
+
+```
+package io.basquiat.model;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinTable;
+import javax.persistence.ManyToMany;
+import javax.persistence.Table;
+
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+
+/**
+ * 
+ * created by basquiat
+ *
+ */
+@Entity
+@Table(name = "member")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@ToString
+public class Member {
+
+	@Builder
+	public Member(String name, String address) {
+		this.name = name;
+		this.address = address;
+	}
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+	
+	private String name;
+	
+	private String address;
+	
+	@ManyToMany
+	@JoinTable(name = "member_item")
+	private List<Item> items = new ArrayList<>();
+	
+}
+
+```
+이때 @JoinTable을 통해서 member_item이라는 테이블을 생성한다는 것을 알 수 있다.
+
+
 
 Item
 
 ```
-
 package io.basquiat.model;
 
-import java.time.LocalDateTime;
-
-import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
-import javax.persistence.PrePersist;
-import javax.persistence.PreUpdate;
 import javax.persistence.Table;
-import javax.persistence.TableGenerator;
 
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import lombok.ToString;
 
 /**
@@ -700,187 +1379,158 @@ import lombok.ToString;
  *
  */
 @Entity
-@Table(name = "basquiat_item")
+@Table(name = "item")
+@Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@TableGenerator(
-		 name = "seq_generator",
-		 table = "sequence_table",
-		 pkColumnValue = "item_seq", 
-		 initialValue = 0,
-		 allocationSize = 1) 
 @ToString
 public class Item {
-
-	@Id
-	@GeneratedValue(strategy = GenerationType.TABLE, generator = "seq_generator")
-	private Long id;
-
-	@Setter
-	@Getter
-	@Column(name = "it_name")
-	private String name;
-
-	@Setter
-	@Getter
-	@Column(name = "it_price")
-	private Integer price;
-
-	@Setter
-	@Getter
-	private BadgeType badge;
-	
-	private LocalDateTime createdAt;
-	
-	private LocalDateTime updatedAt;
 	
 	@Builder
-	public Item(String name, Integer price, BadgeType badge) {
-		this.price = price;
+	public Item(String name, int stock) {
 		this.name = name;
-		this.badge = badge;
+		this.stock = stock;
 	}
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+	
+	private String name;
 
-
-	/** insert할때 현재 시간으로 인서트한다. */
-    @PrePersist
-    protected void setUpCreatedAt() {
-    	createdAt = LocalDateTime.now();
-    }
-
-    /** update 이벤트가 발생시에 업데이트된 시간으로 update */
-    @PreUpdate
-    protected void onUpdate() {
-    	updatedAt = LocalDateTime.now();
-    }
+	private int stock;
 	
 }
 
-
 ```
 
-OtherItem
+이렇게 엔티티를 만들고 DDL을 생성하게 되면 
 
 ```
-package io.basquiat.model;
-
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.Table;
-import javax.persistence.TableGenerator;
-
-import org.apache.commons.lang3.StringUtils;
-
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.ToString;
-
-/**
- * 
- * created by basquiat
- *
- */
-@Entity
-@Table(name = "basquiat_other_item")
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@TableGenerator(
-		 name = "other_seq_generator",
-		 table = "sequence_table",
-		 pkColumnValue = "other_item_seq", 
-		 initialValue = 0,
-		 allocationSize = 1) 
-@ToString
-public class OtherItem {
-
-	@Id
-	@GeneratedValue(strategy = GenerationType.TABLE, generator = "other_seq_generator")
-	private Long id;
-
-	@Setter
-	@Getter
-	private String name;
-
-	@Setter
-	@Getter
-	private Integer price;
-	
-	@Builder
-	public OtherItem(Long id, String name, Integer price) {
-		if(StringUtils.isBlank(name)) {
-			throw new IllegalArgumentException("item name must be not null"); 
-	    }
-		if(price == null || price < 0) {
-			throw new IllegalArgumentException("price must be not under 0"); 
-	    }
-		
-		this.id = id;
-		this.price = price;
-		this.name = name;
-	}
-	
+7월 13, 2020 1:17:22 오전 org.hibernate.jpa.internal.util.LogHelper logPersistenceUnitInformation
+INFO: HHH000204: Processing PersistenceUnitInfo [name: basquiat]
+7월 13, 2020 1:17:22 오전 org.hibernate.Version logVersion
+INFO: HHH000412: Hibernate ORM core version 5.4.17.Final
+7월 13, 2020 1:17:22 오전 org.hibernate.annotations.common.reflection.java.JavaReflectionManager <clinit>
+INFO: HCANN000001: Hibernate Commons Annotations {5.1.0.Final}
+7월 13, 2020 1:17:23 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl configure
+WARN: HHH10001002: Using Hibernate built-in connection pool (not for production use!)
+7월 13, 2020 1:17:23 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl buildCreator
+INFO: HHH10001005: using driver [com.mysql.cj.jdbc.Driver] at URL [jdbc:mysql://localhost:3306/basquiat?rewriteBatchedStatements=true&useUnicode=yes&characterEncoding=UTF-8&serverTimezone=Asia/Seoul]
+7월 13, 2020 1:17:23 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl buildCreator
+INFO: HHH10001001: Connection properties: {user=basquiat, password=****}
+7월 13, 2020 1:17:23 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl buildCreator
+INFO: HHH10001003: Autocommit mode: false
+7월 13, 2020 1:17:23 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl$PooledConnections <init>
+INFO: HHH000115: Hibernate connection pool size: 20 (min=1)
+7월 13, 2020 1:17:24 오전 org.hibernate.dialect.Dialect <init>
+INFO: HHH000400: Using dialect: org.hibernate.dialect.MySQL5InnoDBDialect
+Hibernate: 
+    
+    alter table member_item 
+       drop 
+       foreign key FKo2np23h92vspxdhcxaojylsp3
+7월 13, 2020 1:17:25 오전 org.hibernate.resource.transaction.backend.jdbc.internal.DdlTransactionIsolatorNonJtaImpl getIsolatedConnection
+INFO: HHH10001501: Connection obtained from JdbcConnectionAccess [org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator$ConnectionProviderJdbcConnectionAccess@43b0ade] for (non-JTA) DDL execution was not in auto-commit mode; the Connection 'local transaction' will be committed and the Connection will be set into auto-commit mode.
+Hibernate: 
+    
+    alter table member_item 
+       drop 
+       foreign key FKii0c9jys90jtoqh48pji2w8ip
+Hibernate: 
+    
+    drop table if exists item
+Hibernate: 
+    
+    drop table if exists member
+Hibernate: 
+    
+    drop table if exists member_item
+Hibernate: 
+    
+    create table item (
+       id bigint not null auto_increment,
+        name varchar(255),
+        stock integer not null,
+        primary key (id)
+    ) engine=InnoDB
+7월 13, 2020 1:17:25 오전 org.hibernate.resource.transaction.backend.jdbc.internal.DdlTransactionIsolatorNonJtaImpl getIsolatedConnection
+INFO: HHH10001501: Connection obtained from JdbcConnectionAccess [org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator$ConnectionProviderJdbcConnectionAccess@599f571f] for (non-JTA) DDL execution was not in auto-commit mode; the Connection 'local transaction' will be committed and the Connection will be set into auto-commit mode.
+Hibernate: 
+    
+    create table member (
+       id bigint not null auto_increment,
+        address varchar(255),
+        name varchar(255),
+        primary key (id)
+    ) engine=InnoDB
+Hibernate: 
+    
+    create table member_item (
+       Member_id bigint not null,
+        items_id bigint not null
+    ) engine=InnoDB
+Hibernate: 
+    
+    alter table member_item 
+       add constraint FKo2np23h92vspxdhcxaojylsp3 
+       foreign key (items_id) 
+       references item (id)
+Hibernate: 
+    
+    alter table member_item 
+       add constraint FKii0c9jys90jtoqh48pji2w8ip 
+       foreign key (Member_id) 
+       references member (id)
+7월 13, 2020 1:17:26 오전 org.hibernate.engine.transaction.jta.platform.internal.JtaPlatformInitiator initiateService
+INFO: HHH000490: Using JtaPlatform implementation: [org.hibernate.engine.transaction.jta.platform.internal.NoJtaPlatform]
+7월 13, 2020 1:17:26 오전 org.hibernate.engine.internal.StatisticalLoggingSessionEventListener end
+INFO: Session Metrics {
+    380400 nanoseconds spent acquiring 1 JDBC connections;
+    451900 nanoseconds spent releasing 1 JDBC connections;
+    0 nanoseconds spent preparing 0 JDBC statements;
+    0 nanoseconds spent executing 0 JDBC statements;
+    0 nanoseconds spent executing 0 JDBC batches;
+    0 nanoseconds spent performing 0 L2C puts;
+    0 nanoseconds spent performing 0 L2C hits;
+    0 nanoseconds spent performing 0 L2C misses;
+    0 nanoseconds spent executing 0 flushes (flushing a total of 0 entities and 0 collections);
+    0 nanoseconds spent executing 0 partial-flushes (flushing a total of 0 entities and 0 collections)
 }
-
-
-```
-
-
-Item과 OtherItem을 테이블 전략으로 사용해 보자.     
-
-그런데 독특한 점은 
-
-```
-Item.java
-
-@TableGenerator(
-		 name = "seq_generator",
-		 table = "sequence_table",
-		 pkColumnValue = "item_seq", 
-		 initialValue = 0,
-		 allocationSize = 1) 
-
-
-OtherItem.java
-@TableGenerator(
-		 name = "other_seq_generator",
-		 table = "sequence_table",
-		 pkColumnValue = "other_item_seq", 
-		 initialValue = 0,
-		 allocationSize = 1) 
+7월 13, 2020 1:17:26 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl$PoolState stop
+INFO: HHH10001008: Cleaning up connection pool [jdbc:mysql://localhost:3306/basquiat?rewriteBatchedStatements=true&useUnicode=yes&characterEncoding=UTF-8&serverTimezone=Asia/Seoul]
 
 ```
 
-보면 table명이 같다. 이렇게 하면 하나의 테이블을 사용할 수 있다. 다만 각 테이블의 시퀀스 정보를 구분하기 위해서 pkColumnValue만 다르다.     
+생성 쿼리를 보면 
 
-즉, pkColumnValue은 해당 엔티티가 id를 가져올 때 사용할 키값이라고 보면 된다.    
+```
+Hibernate: 
+    
+    create table member_item (
+       Member_id bigint not null,
+        items_id bigint not null
+    ) engine=InnoDB
+Hibernate: 
+    
+    alter table member_item 
+       add constraint FKo2np23h92vspxdhcxaojylsp3 
+       foreign key (items_id) 
+       references item (id)
+Hibernate: 
+    
+    alter table member_item 
+       add constraint FKii0c9jys90jtoqh48pji2w8ip 
+       foreign key (Member_id) 
+       references member (id)
 
-실제로 ddl을 생성하면 어떻게 될까?    
+```
 
-![실행이미지](https://github.com/basquiat78/completedJPA/blob/5.PrimaryKeyMapping/capture/capture1.png)     
+member_item테이블을 생성하고 각 컬럼을 item과 member를 참조해 fk를 잡는 alter쿼리를 볼 수 있다.    
 
-하나의 테이블에서 각 테이블의 시퀀스를 관리하게 만들 수 있다.     
+하지만 이 방식을 권유하지 않는 이유는 이 중간 테이블만으로는 무언가를 제대로 할 수 없다는 것이다.     
 
-뭔가 좋아보인다. 테이블 하나에 전부 관리 할 수 있다니?     
+사용자가 상품을 몇개를 언제 주문했는지에 대한 정보를 담을 수 있어야 한다는 것이다.    
 
-하지만 이 방식은 아무래도 다른 전략에 비해 성능 문제가 발생할 소지가 있다.    
+결국 책에서는 저 중간 테이블을 엔티티로 격상시켜서 1:N, N:1로 매핑하는 것을 권유한다.     
 
-만일 여러개의 시퀀스를 저렇게 한 테이블에 관리하면 LOCK의 문제가 발생할 수 있다. 여러개의 테이블에서 동시에 시퀀스를 활당받기 위해 해당 테이블을 오가고 업데이트 하게 되면 어떻게 될까?     
-
-요즘은 거의 쓰지 않는 전략인듯 싶다. 하지만 상황에 의해 꼭 써야할 수도 있어야 하기에 한번 쯤은 살펴보면 좋을 것 같다.    
-
-# At A Glance     
-
-간략하게 기본키 매핑 전략에 대해 알아봤다.     
-
-사실 답은 없다.     
-
-그리고 만일 직접 매핑 전략의 경우에는 대리키를 사용하라고 권장하고 있다.    
-
-유일한 키 값의 조합을 권장하는데 어째든 이것은 상황에 따라서 언제든지 결정해서 사용할 수 있는 전략이다.    
-
-참고로 회사에서는 대부분 Identity전략과 코드성의 기본키는 키를 제너레이터하는 로직을 활용해 매핑하는 방식을 채택하고 있다.    
-
-다음에는 어쩌면 JPA의 꽃이라고 할 수 있는 연관관계 매핑을 진행해 보겠다.
+다음에는 양방향 매핑을 알아보겠다.
