@@ -64,3 +64,6 @@ JPA를 처음 접하시는 분들에게는 그래도 어느정도 도움이 되�
 [엔티티 매핑 part2](https://github.com/basquiat78/completedJPA/tree/4-1.entitiyMapping2)    
 
 [기본키 매핑 전략](https://github.com/basquiat78/completedJPA/tree/5.PrimaryKeyMapping)    
+
+[단방향 매핑](https://github.com/basquiat78/completedJPA/tree/6.unary-relation-mapping)     
+
