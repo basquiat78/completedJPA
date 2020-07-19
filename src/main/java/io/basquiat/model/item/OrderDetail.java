@@ -10,6 +10,7 @@ import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
@@ -25,6 +26,16 @@ import lombok.ToString;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @ToString(exclude = {"item", "order"})
 public class OrderDetail {
+
+	@Builder
+	public OrderDetail(Item item, Order order, int quantity, int price, int optionId, String optionName) {
+		this.item = item;
+		this.order = order;
+		this.quantity = quantity;
+		this.price = price;
+		this.optionId = optionId;
+		this.optionName = optionName;
+	}
 
 	/** 주문 번호 생성 */
 	@Id

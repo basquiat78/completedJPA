@@ -15,6 +15,7 @@ import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
@@ -25,7 +26,15 @@ import lombok.ToString;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @ToString(exclude = "order")
 public class Delivery {
-	
+
+	@Builder
+	public Delivery(String courier, DeliveryStatus status, String place, Order order) {
+		this.courier = courier;
+		this.status = status;
+		this.place = place;
+		this.order = order;
+	}
+
 	/** 배송 번호 생성 */
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)

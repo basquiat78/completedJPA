@@ -20,6 +20,7 @@ import javax.persistence.PrePersist;
 import javax.persistence.Table;
 
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
@@ -35,6 +36,14 @@ import lombok.ToString;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @ToString(exclude = {"member", "delivery", "orderDetails"})
 public class Order {
+
+	@Builder
+	public Order(OrderStatus status, Member member, Delivery delivery, List<OrderDetail> orderDetails) {
+		this.status = status;
+		this.member = member;
+		this.delivery = delivery;
+		this.orderDetails = orderDetails;
+	}
 
 	/** 주문 번호 생성 */
 	@Id
