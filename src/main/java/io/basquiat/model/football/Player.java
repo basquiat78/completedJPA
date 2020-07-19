@@ -1,4 +1,4 @@
-package io.basquiat.model;
+package io.basquiat.model.football;
 
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -20,20 +20,22 @@ import lombok.ToString;
  * created by basquiat
  *
  */
-@Entity
+//@Entity
 @Table(name = "player")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@ToString
+@ToString(exclude = { "footballClub", "locker" })
 public class Player {
 
 	@Builder
-	public Player(String name, int age, String position, Club club, Locker locker) {
+	public Player(String name, int age, String position, Club footballClub, Locker locker) {
 		this.name = name;
 		this.age = age;
 		this.position = position;
-		this.club = club;
+		this.footballClub = footballClub;
+		footballClub.getPlayers().add(this);
 		this.locker = locker;
+		locker.matchingPlayer(this);
 	}
 
 	/** 선수 아이디 */
@@ -52,7 +54,7 @@ public class Player {
 	
 	@ManyToOne
 	@JoinColumn(name = "club_id")
-	private Club club;
+	private Club footballClub;
 	
 	@OneToOne
 	@JoinColumn(name = "locker_id")

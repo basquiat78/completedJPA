@@ -1,148 +1,70 @@
-# 단방향 연관관계 매핑     
+# 양방향 연관관계 매핑     
 
-일단 이 브랜치를 진행하기 앞서 우리는 JPA를 공부하지만 맨 처음 브랜치에서 언급했듯이 JPA는  database위에 있는 기술이다.     
+이전 브랜치에서는 단방향 연관관계 매핑에 대해서 배웠다.    
 
-이게 무슨 말이냐면 최소한 DB에 대한 기본 개념은 알아야 한다는 것이다.     
+하지만 이런 의문이 들 것이다.     
 
-특히 테이블관련 테이블간의 관계에 대해서 고민을 해봐야 한다는 것이다.     
+'Player엔티티 기준으로 Club엔티티쪽으로 ManyToOne으로 그리고 Locker엔티티로 OneToOne으로 매핑한건은 잘 알겠지만 이 구조로는 Club쪽 또는 Locker쪽에서는 Player를 조회할 수 없는건가요?'
 
-그리고 DB에서 테이블간의 관계는 사실 별거 없다. primary key, forein key에 대한 최소한의 개념을 알아야 한다.    
+지금 구조로는 객체 그래프 탐색이 Player에서뿐이 할 수 없다. 그래서 양방향 연관관계 매핑이 존재하고 방법은 반대쪽에서도 마찬가지로 연관관계를 맺으면 된다.    
 
-물론 정규화된 테이블의 경우에도 그렇고 비정규화된 테이블 즉 pk와 fk가 잡혀있지 않아도 조인해서 가져 올 수 있는 관계있는 컬럼이 있다면 얼마든지 조인해서 정보를 가져올 수 있다.    
+반대 쪽, 그러니깐 Club에서 Player로 ManyToOne의 반대 개념으로 받아드릴 수 있는 OneToMany로 그리고 OneToOne은 그 반대도 OneToOne이니 Locker에서 Player로 OneToOne매핑을 해주면 된다.    
 
-그리고 객체간의 연관 관계와 db에서의 테이블간의 관계에 대한 차이점을 어느 정도 인지를 해야 한다. 왜냐하면 결국 이러한 db의 테이블을 객체로 추상화한 것이 JPA기 때문이다.     
+결국 양방향 매핑이라는 것은 2개의 단방향 매핑이라는 것을 알 수 있다.    
 
-그리고 단방향 연간관계 매핑이라고 했는데 그러면 당연히 단방향이 있으면 양방향이 있다는 것을 JPA를 공부하신 분들이라면 아실 것이다.     
+하지만 양방향 매핑을 하게 될 경우에는 연관관계의 주인이 어디인지 분석을 해야 한다.    
 
-하지만 SQL을 보면 테이블간에는 단방향, 양방향이라는 개념이 성립되지 않는다. 단지 연관관계만이 존재한다.     
+## mappedBy    
 
-[The 3 Types of Relationships in Database Design](https://database.guide/the-3-types-of-relationships-in-database-design/)    
+연관관계의 주인을 이야기할 때 이 mappedBy라는 것이 있다.     
 
-입으로 한번 털어보자.     
+사실 이게 가장 어렵다고 말하는데 예를 들면 SNS같은 것을 생각해 보자. 간혹 가다보면 어떻게 해서 내가 예전에 알던 지인을 추천하는 경우를 보게 된다.     
 
-책에서도 그렇고 어느 블로그를 가더라도 가장 기본적인 예제가 Member와 Team을 예로 든다.    
+소셜 네트워크에서 이런 경우 가장 중요한 키워드가 '키맨'이다. 그 키맨이 중요한 위치에 있는 사람인지 아닌지는 중요하지 않다. 그 키맨을 중심으로 뻗어가는 관계망 네트워크가 더 중요하다.     
 
-우리는 좀 더 현실적인 방식으로 축구에서 Player와 Club으로 한번 생각해 보자.    
+즉, 그 '키맨'이라는 것은 그중 가장 많은 인맥을 가지고 있는 사람이라는 것이다.     
 
-가령 손흥민은 현재 토트넘에 소속된 선수이다.   
+그렇다면 객체 입장에서도 한번 생각해 보자.     
 
-정말 특별한 경우라서 '홍길동'이라는 사람이 여러 부서에 소속되는 경우가 아니라면 (실제 이런 경우를 대기업 프로젝트에서 본적이 있어서) 대부분은 하나의 부서에만 소속되어 있듯이 손흥민은 토트넘 소속이다.     
+이전에 봤던 이미지를 다시 한번 보자.     
 
-하지만 토트넘이라는 클럽은 어떤가?     
+![실행이미지](https://github.com/basquiat78/completedJPA/blob/6.unary-relation-mapping/capture/capture3.png)    
 
-감독인 조세 무리뉴에서 해리 케인, 스티븐 베르흐윈, 위고 요리스등 다양한 선수들이 포함되어 있다.     
+여기서 '키맨'은 무엇일까?     
 
-자 그러면 클럽입장에서 선수와의 관계는 어떤 관계일까?     
+바로 외래키를 갖고 있는 Player이다. 이 '키맨'을 통해서 Club, Locker의 정보를 알 수 있기 때문이다.     
 
-![실행이미지](https://github.com/basquiat78/completedJPA/blob/6.unary-relation-mapping/capture/capture1.png)    
+바로 이 '키맨'이라는 단어를 Player입장에서 외래키라고 생각한다면 연관관계의 주인이라는 의미를 좀 더 쉽게 생각할 수 있지 않을까?     
 
-위와 같을 것이다. 일단 위 erd를 그릴 때 내가 처음 사용해봐서 잘 못 사용하고 있다는 것을 알았는데 뭐 설명하기에는 무리가 없어서 그대로 사용한다.    
+물리적인 DB테이블에서 Player가 가장 많은 외래키를 가지고 있다는 것은 위에 언급한 관계망 네트워크를 생각할 때 Player를 기준으로 엮여 있는 테이블들을 알 수 있다.        
 
-즉 Club과 Player는 Club ->(one-to-many)Player, Player -> (many-to-one) Club의 관계를 파악해야 한다.    
+그리고 객체 입장에 생각해보면 객체 그래프 탐색에 있어서 가장 이점을 가지고 있는 Player가 바로 위에서 언급했던 '키맨'의 역할로 연관관계의 주인이라고 할 수 있다.     
 
-위의 관계를 말로 풀면 클럽은 여러명의 선수들이 모여있는 집단이기 때문에 one-to-many이고 수많은 선수들이 하나의 클럽에만 소속할 수 있기에 many-to-one의 relationship을 가지게 된다.    
+책에서도 양방향 연관관계에서의 외래 키를 관리하는 객체가 주인이 될 수 있다고 말한다.     
 
-다만 방향성이 없다는 것은 단순하게 쿼리로 그냥 생각해 봐도 알 수 있다.     
+이때 양방향에서 고려해야 하는 부분은 주인이 아닌 객체에서 참조하는 대상 엔티티에 대해서는 READ-ONLY, 즉 읽기만 가능하게 된다.    
 
-선수가 팀이 없을 수 없다는 가정하에 Inner join으로 한번 쿼리를 짜 보자.
+하지만 확실히 객채 그래프 탐색이라는 의미에서는 아주 적절하다.     
 
-```
+이때 mappedBy로 주인을 지정하게 된다.    
 
-SELECT p.*,
-		 c.*
-	FROM player p
-	JOIN club c ON p.club_id = c.id
+그럼 거두절미하고 코드로 보자.    
 
-또는
-
-SELECT c.*,
-		 p.*
-	FROM club c
-	JOIN player p ON c.id = p.club_id
-
-```
-
-방향성이라기보다는 무엇을 중심으로 질의를 하느냐에 따른 선택지라는 것이다.     
-
-사실 데이터베이스 중심에서 생각하다가 이것을 객체에 올려두고 생각하면 그 사이의 차이점이 존재한다.    
-
-한번 코드로 살펴보자. 일단 위에 db관점에서 테이블을 중심으로 엔티티를 설계하면 다음과 같이 하게 된다.    
-
-
-Player
-
-```
-
-package io.basquiat.model;
-
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.Table;
-
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
-
-/**
- * 
- * created by basquiat
- *
- */
-@Entity
-@Table(name = "player")
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@ToString
-public class Player {
-
-	@Builder
-	public Player(String name, int age, String position, Long clubId) {
-		this.name = name;
-		this.age = age;
-		this.position = position;
-		this.clubId = clubId;
-	}
-
-	/** 선수 아이디 */
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
-	
-	/** 선수 명 */
-	@Getter
-	private String name;
-	
-	/** 선수 나이 */
-	@Getter
-	private int age;
-
-	/** 선수 포지션 */
-	@Getter
-	private String position;
-	
-	/** 선수가 속한 클럽 아이디 */
-	@Getter
-	@Column(name = "club_id")
-	private Long clubId;
-	
-}
-
-
-```
+기존의 단방향 관계에 있던 Locker와 Club에도 Player로 단방향 매핑을 하는 것으로부터 일단 시작한다.    
 
 Club
 
 ```
-package io.basquiat.model;
+package io.basquiat.model.football;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
 import lombok.AccessLevel;
@@ -158,8 +80,9 @@ import lombok.ToString;
  */
 @Entity
 @Table(name = "club")
+@Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@ToString
+@ToString(exclude = "players")
 public class Club {
 
 	@Builder
@@ -174,234 +97,130 @@ public class Club {
 	private Long id;
 	
 	/** 클럽 명 */
-	@Getter
 	private String name;
 	
 	/** 클럽 랭킹 순위 */
-	@Getter
 	private int ranking;
+	
+	@OneToMany(mappedBy = "club")
+	private List<Player> players = new ArrayList<>();
 	
 }
 
+```
+기존에는 없던 
 
 ```
+@OneToMany(mappedBy = "club")
+private List<Player> players = new ArrayList<>();
+```
+을 통해서 Player와 연관관계를 맺게 되는데 당연히 OneToMany이기 때문에 배열로 지정한다.    
 
-자 코드를 보면 확실히 테이블을 객체로 잘 매핑했다. 그럼 뭐가 문제일까?     
+하지만 이 경우 null문제를 피하기 위해선 초기화하는 코드가 들어가게 된다.    
 
-사실 문제는 없다. 일단 코드로 확인해보는게 최고다.    
+N:1 문제로 발생할 수 있는 경우를 대비해서 List보다는 중복을 허용하지 않는 Set으로 하는 경우도 있는데 타입에 대한 관점에서는 이와 관련한 많은 블로그나 글을 보면 List를 권장하는 분위기이다.     
 
-여기서 foreign key를 가지고 있는 객체 또는 테이블은 Player이다. 
+그리고 나서 mappedBy에 club을 지정하고 있다.     
 
-실제 상황에서의 관점으로 살펴보자.     
+'저기요? 왜 뜬금없이 club이죠? 주인을 지정하는 거라면서요? 그러면 player가 아닌가요?'     
 
-선수의 입장에서는 내가 경기를 뛰기 위해서는 무엇이 필요할까? 당연히 팁이 있어야 한다. 팀에 들어가야 하는 것이다.         
+~~그렇네요?~~        
 
-OOP는 이러한 현상들을 관찰하고 영역안으로 녹여내는것이 중요하다.     
-
-자 그럼 코드는 어떻게 짜야 할까?    
+하지만 저 club은 Player객체에 선언되어 있는 필드를 지칭한다.    
 
 ```
-package io.basquiat;
+@ManyToOne
+@JoinColumn(name = "club_id")
+private Club club;
+```
+Player에 있는 필드중에 위 필드가 club인것이 보이는가?    
 
-import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
-import javax.persistence.EntityTransaction;
-import javax.persistence.Persistence;
+바로 저것을 의미하는 것이다.     
 
-import io.basquiat.model.Club;
-import io.basquiat.model.Player;
+'아하! 그렇군요. 그러면 Locker에서도 mappedBy는 locker가 되겠군요?'
+
+그렇다면 player에서 
+
+```
+@ManyToOne
+@JoinColumn(name = "club_id")
+private Club footballClub;
+```
+이라고 되어 있다면 mappedBy = "footballClub"이 되겠군요? 맞읍니까?    
+
+맞읍니다.    
+
+결국 Club이 Player에게 이렇게 메세지를 보낸다고 생각하면 된다.    
+
+'야 나도 너랑 연관관계가 있는데 그게 뭐냐면 너가 가지고 있는 footballClub이고 그 footballClub의 주인이 너야~'    
+
+라고 메세지를 보내는 방식을 mappedBy로 표현한다고 생각하면 좀 쉬워질라나?    
+
+
+Locker
+
+```
+package io.basquiat.model.football;
+
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 /**
  * 
  * created by basquiat
  *
  */
-public class jpaMain {
+@Entity
+@Table(name = "locker")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@ToString(exclude = "player")
+public class Locker {
 
-    public static void main(String[] args) {
-        EntityManagerFactory emf = Persistence.createEntityManagerFactory("basquiat");
-        EntityManager em = emf.createEntityManager();
-        EntityTransaction tx = em.getTransaction();
-        tx.begin();
-        try {
-        	
-        	// 1. 내가 들어가고 싶은 팀이 무엇인지 살펴본다.
-        	Club tottenhamFootballClub = Club.builder().name("Tottenham Hotspur Football Club")
-        											   .ranking(9)
-        											   .build();
-        	em.persist(tottenhamFootballClub);
-        	System.out.println("기본키 매핑은 Identity다. 그래서 쿼리 날아감.");
-        	
-        	// 2. 손흥민이 토트넘으로 들어간다.
-        	Player son = Player.builder().name("손흥민")
-        								 .age(27)
-        								 .position("Striker")
-        								 .clubId(tottenhamFootballClub.getId())
-        								 .build();
-        	em.persist(son);
-        	System.out.println("기본키 매핑은 Identity다. 그래서 쿼리 날아감.");
-        	
-        	tx.commit();
-        } catch(Exception e) {
-            tx.rollback();
-        } finally {
-            em.close();
-        }
-        emf.close();
-    }
-    
+	@Builder
+	public Locker(String name, String position) {
+		this.name = name;
+		this.position = position;
+	}
+	
+	/** 락커 아이디 */
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+	
+	/** 락커 이름 */
+	private String name;
+
+	/** 락커가 있는 위치 정보 */
+	private String position;
+	
+	@OneToOne(mappedBy = "locker") // 'Player야 니가 품고 있는 locker가 있는데 그 locker의 주인이 너야'
+	private Player player;
+	
+	public void matchingPlayer(Player player) {
+		this.player = player;
+	}
 }
 
 ```
+'아하? 그렇군요? 근데 저 밑에 못보던 코드가 보이는데요?'     
 
-코드 흐름도 문제가 없다. 토트넘이라는 클럽을 선정하고 그 클럽의 아이디를 가져와서 세팅을 하는 코드 자체는 문제가 없어 보인다.     
+이것은 연관관계 편의 메소드를 작성한 것이다. 일단 이것은 Player코드를 한번 보자.    
 
-그러면 이제 조회를 해보자.    
-
-
-```
-package io.basquiat;
-
-import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
-import javax.persistence.EntityTransaction;
-import javax.persistence.Persistence;
-
-import io.basquiat.model.Club;
-import io.basquiat.model.Player;
-
-/**
- * 
- * created by basquiat
- *
- */
-public class jpaMain {
-
-    public static void main(String[] args) {
-        EntityManagerFactory emf = Persistence.createEntityManagerFactory("basquiat");
-        EntityManager em = emf.createEntityManager();
-        EntityTransaction tx = em.getTransaction();
-        tx.begin();
-        try {
-        	// 손흥민을 조회한다.
-        	Player son = em.find(Player.class, 1L);
-        	System.out.println(son.toString());
-        	
-        	// 손흥민의 클럽 아이디로 클럽을 조회한다.
-        	Club sonsClub = em.find(Club.class, son.getClubId());
-        	System.out.println(sonsClub.toString());
-        	
-        	tx.commit();
-        } catch(Exception e) {
-            tx.rollback();
-        } finally {
-            em.close();
-        }
-        emf.close();
-    }
-    
-}
+Plyaer
 
 ```
-
-결과는?     
-
-```
-7월 12, 2020 12:55:13 오전 org.hibernate.jpa.internal.util.LogHelper logPersistenceUnitInformation
-INFO: HHH000204: Processing PersistenceUnitInfo [name: basquiat]
-7월 12, 2020 12:55:13 오전 org.hibernate.Version logVersion
-INFO: HHH000412: Hibernate ORM core version 5.4.17.Final
-7월 12, 2020 12:55:13 오전 org.hibernate.annotations.common.reflection.java.JavaReflectionManager <clinit>
-INFO: HCANN000001: Hibernate Commons Annotations {5.1.0.Final}
-7월 12, 2020 12:55:14 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl configure
-WARN: HHH10001002: Using Hibernate built-in connection pool (not for production use!)
-7월 12, 2020 12:55:14 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl buildCreator
-INFO: HHH10001005: using driver [com.mysql.cj.jdbc.Driver] at URL [jdbc:mysql://localhost:3306/basquiat?rewriteBatchedStatements=true&useUnicode=yes&characterEncoding=UTF-8&serverTimezone=Asia/Seoul]
-7월 12, 2020 12:55:14 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl buildCreator
-INFO: HHH10001001: Connection properties: {user=basquiat, password=****}
-7월 12, 2020 12:55:14 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl buildCreator
-INFO: HHH10001003: Autocommit mode: false
-7월 12, 2020 12:55:14 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl$PooledConnections <init>
-INFO: HHH000115: Hibernate connection pool size: 20 (min=1)
-7월 12, 2020 12:55:15 오전 org.hibernate.dialect.Dialect <init>
-INFO: HHH000400: Using dialect: org.hibernate.dialect.MySQL5InnoDBDialect
-7월 12, 2020 12:55:16 오전 org.hibernate.engine.transaction.jta.platform.internal.JtaPlatformInitiator initiateService
-INFO: HHH000490: Using JtaPlatform implementation: [org.hibernate.engine.transaction.jta.platform.internal.NoJtaPlatform]
-Hibernate: 
-    select
-        player0_.id as id1_3_0_,
-        player0_.age as age2_3_0_,
-        player0_.club_id as club_id3_3_0_,
-        player0_.name as name4_3_0_,
-        player0_.position as position5_3_0_ 
-    from
-        player player0_ 
-    where
-        player0_.id=?
-Player(id=1, name=손흥민, age=27, position=Striker, clubId=1)
-Hibernate: 
-    select
-        club0_.id as id1_2_0_,
-        club0_.name as name2_2_0_,
-        club0_.ranking as ranking3_2_0_ 
-    from
-        club club0_ 
-    where
-        club0_.id=?
-Club(id=1, name=Tottenham Hotspur Football Club, ranking=9)
-7월 12, 2020 12:55:16 오전 org.hibernate.engine.internal.StatisticalLoggingSessionEventListener end
-INFO: Session Metrics {
-    580700 nanoseconds spent acquiring 1 JDBC connections;
-    443100 nanoseconds spent releasing 1 JDBC connections;
-    11827500 nanoseconds spent preparing 2 JDBC statements;
-    2317700 nanoseconds spent executing 2 JDBC statements;
-    0 nanoseconds spent executing 0 JDBC batches;
-    0 nanoseconds spent performing 0 L2C puts;
-    0 nanoseconds spent performing 0 L2C hits;
-    0 nanoseconds spent performing 0 L2C misses;
-    9383300 nanoseconds spent executing 1 flushes (flushing a total of 2 entities and 0 collections);
-    0 nanoseconds spent executing 0 partial-flushes (flushing a total of 0 entities and 0 collections)
-}
-7월 12, 2020 12:55:16 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl$PoolState stop
-INFO: HHH10001008: Cleaning up connection pool [jdbc:mysql://localhost:3306/basquiat?rewriteBatchedStatements=true&useUnicode=yes&characterEncoding=UTF-8&serverTimezone=Asia/Seoul]
-```
-
-뭐가 문제인가요???? 코드도 깔끔한거 같고 조회도 잘 되었는데요?     
-
-맞다. 문제가 없다. 하지만 뭔가가 불합리해 보인다. 만일 쿼리로 한다면 어떻게 할까?    
-
-```
-SELECT p.*,
-	   c.name,
-       c.ranking
-	FROM player p
-    INNER JOIN club c ON p.club_id = c.id
-```
-
-![실행이미지](https://github.com/basquiat78/completedJPA/blob/6.unary-relation-mapping/capture/capture2.png)    
-
-그냥 한방 쿼리로 모든 것을 조회해 올 수 있다. 그런 면에서 저런 방식은 무언가가 불합리해 보인다는 것이다. 코드의 낭비도 있어 보인다.    
-
-그냥 쿼리처럼 한번에 player를 조회할 때 클럽도 조회해 올 수 없는 거니?    
-
-당연히 있다. 이제부터 그 방법을 배워 볼 것이다.    
-
-책에서는 굳이 모든 것을 양방향으로 맺을 필요는 없다고 말한다. 필요하면 그때 가서 양방향 매핑을 해도 무방하다고 말하고 있기 때문에 일단 우리는 단방향을 먼저 고민해 보자.     
-
-자 그럼 저 위의 예제를 중심으로 설명을 해보자.    
-
-## @ManyToOne    
-
-다대일 또는 N:1이라는 표현으로 가장 많이 사용되는 매핑이다.    
-
-양방향을 염두해 둔다면 그 반대는 @OneToMany가 될 것이라는 것은 딱 봐도 알 수 있다.    
-
-이제부터는 다음과 같은 방식으로 사용할 수 있다.    
-
-Player
-
-```
-package io.basquiat.model;
+package io.basquiat.model.football;
 
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -409,6 +228,7 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
+import javax.persistence.OneToOne;
 import javax.persistence.Table;
 
 import lombok.AccessLevel;
@@ -426,15 +246,18 @@ import lombok.ToString;
 @Table(name = "player")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@ToString
+@ToString(exclude = {"club", "locker"})
 public class Player {
 
 	@Builder
-	public Player(String name, int age, String position, Club club) {
+	public Player(String name, int age, String position, Club club, Locker locker) {
 		this.name = name;
 		this.age = age;
 		this.position = position;
 		this.club = club;
+		club.getPlayers().add(this);
+		this.locker = locker;
+		locker.matchingPlayer(this);
 	}
 
 	/** 선수 아이디 */
@@ -451,232 +274,43 @@ public class Player {
 	/** 선수 포지션 */
 	private String position;
 	
-	/** 선수가 속한 클럽 객체 */
 	@ManyToOne
 	@JoinColumn(name = "club_id")
 	private Club club;
 	
-}
-```
-
-잘 보면 기존에는 클럽의 아이디를 필드로 가지고 있었는데 지금은 Club이라는 객체를 가지게 된다.    
-
-특이점은 @JoinColumn이다. Club 엔티티가 정확하게 작성되어 있다면 Player입장에서는 Club의 pk를 알 수 있다.    
-
-다시 위에 이미지인 Player와 Club의 erd 이미지를 다시 보게 되면 Player의 fk는 club_id로 잡혀있다. 바로 이 JoinColumn의 name은 Player테이블이 가지게 되는 club_id임을 알 수 있다.     
-
-이 경우에는 @JoinColumn을 명시하지 않아도 기본값으로 설정된다.    
-
-그럼 그냥 JPA를 통해 DDL을 생성하게 되면 어떻게 될까?     
-
-DDL을 생성하면 erd와 똑같이 테이블이 생성된 것을 확인 할 수 있다.    
-
-```
-package io.basquiat;
-
-import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
-import javax.persistence.EntityTransaction;
-import javax.persistence.Persistence;
-
-import io.basquiat.model.Club;
-import io.basquiat.model.Player;
-
-/**
- * 
- * created by basquiat
- *
- */
-public class jpaMain {
-
-    public static void main(String[] args) {
-        EntityManagerFactory emf = Persistence.createEntityManagerFactory("basquiat");
-        EntityManager em = emf.createEntityManager();
-        EntityTransaction tx = em.getTransaction();
-        tx.begin();
-        try {
-        	// 1. 내가 들어가고 싶은 팀이 무엇인지 살펴본다.
-        	Club tottenhamFootballClub = Club.builder().name("Tottenham Hotspur Football Club")
-        											   .ranking(9)
-        											   .build();
-        	em.persist(tottenhamFootballClub);
-        	System.out.println("기본키 매핑은 Identity다. 그래서 쿼리 날아감.");
-        	
-        	// 2. 손흥민이 토트넘으로 들어간다.
-        	Player son = Player.builder().name("손흥민")
-        								 .age(27)
-        								 .position("Striker")
-        								 .club(tottenhamFootballClub)
-        								 .build();
-        	em.persist(son);
-        	System.out.println("기본키 매핑은 Identity다. 그래서 쿼리 날아감.");
-        	tx.commit();
-        } catch(Exception e) {
-            tx.rollback();
-        } finally {
-            em.close();
-        }
-        emf.close();
-    }
-    
-}
-
-```
-
-이제는 클럽의 아이디가 아닌 엔티티 객체 자체를 세팅해서 실행해 보자. 여기까지는 기존과 다를 바 없다. 단지 Club에서 아이디를 꺼내와서 세팅하는 것이 아닌 그냥 객체 자체를 세팅한다.    
-
-그리고 이제 조회를 해보자.     
-
-```
-package io.basquiat;
-
-import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
-import javax.persistence.EntityTransaction;
-import javax.persistence.Persistence;
-
-import io.basquiat.model.Player;
-
-/**
- * 
- * created by basquiat
- *
- */
-public class jpaMain {
-
-    public static void main(String[] args) {
-        EntityManagerFactory emf = Persistence.createEntityManagerFactory("basquiat");
-        EntityManager em = emf.createEntityManager();
-        EntityTransaction tx = em.getTransaction();
-        tx.begin();
-        try {
-        	
-        	Player son = em.find(Player.class, 1L);
-        	System.out.println(son);
-        	tx.commit();
-        } catch(Exception e) {
-            tx.rollback();
-        } finally {
-            em.close();
-        }
-        emf.close();
-    }
-    
-}
-
-```
-
-Club를 조회하는 코드가 없는데요?     
-
-하지만 결과를 보면 어떻까?
-
-
-```
-Hibernate: 
-    select
-        player0_.id as id1_3_0_,
-        player0_.age as age2_3_0_,
-        player0_.club_id as club_id5_3_0_,
-        player0_.name as name3_3_0_,
-        player0_.position as position4_3_0_,
-        club1_.id as id1_2_1_,
-        club1_.name as name2_2_1_,
-        club1_.ranking as ranking3_2_1_ 
-    from
-        player player0_ 
-    left outer join
-        club club1_ 
-            on player0_.club_id=club1_.id 
-    where
-        player0_.id=?
-Player(id=1, name=손흥민, age=27, position=Striker, club=Club(id=1, name=Tottenham Hotspur Football Club, ranking=9))
-```
-
-오호라? Club의 정보까지 한번에 가져왔다는 것을 알 수 있다.    
-
-자 그럼 위에서 언급했던 @JoinColumn에 대해서 좀 알아보자.    
-
-### @JoinColumn    
-
-1. name: 매핑할 외래 키 이름이다. 보통은 명시적으로 쓰긴 한다. 하지만 설정을 하지 않게된다면 이것은 필드명 (club)_대상테이블(Club에 설정된 pk), 즉 club_id가 된다.     
-
-2. referencedColumnName:  외래 키가 참조하는 대상 테이블의 컬럼명이라고 하는데 이것은 @EmbeddedId에서 언급할 것이다. 기본값으로는 참조하는 테이블의 기본키 컬럼명이다.     
-
-3. foreignKey: 외래 키 제약조건을 직접 지정한다. DDL에만 관여하는 녀석으로 유니크 제약 조건처럼 값을 설정하지 않으면 랜덤키 조합 방식으로 자동생성된다.    
-
-4. @Column의 속성값들 기본적으로 포함한다. (unique, nullable, insertable, updatable, columnDefinition, table)     
-
-
-## @OneToMany     
-
-개인적으로 이해가 되지 않는 JPA에서 제공하는 표준 스펙이다. 책에서도 잘 사용하지 않는다고 하는데 그 이유는 운영상에 문제가 있다는 것이다.    
-
-사실 1:N라고 표현하지만 실제 erd는 손을 대지 않는다.     
-
-사실 database입장에서는 외래키는 다쪽, 그러니깐 Player쪽에 있어야 한다.    
-
-하지만 객체 입장에서는 역으로 생각해 볼 수 있다. 즉 Player입장에서는 클럽 정보를 알고 싶지 않은 경우를 의미한다.    
-
-연관관계 대상이 변경되었기 때문에 엔티티를 다시 정의하자.    
-
-Player
-
-```
-package io.basquiat.model;
-
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.Table;
-
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
-
-/**
- * 
- * created by basquiat
- *
- */
-@Entity
-@Table(name = "player")
-@Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@ToString
-public class Player {
-
-	@Builder
-	public Player(String name, int age, String position) {
-		this.name = name;
-		this.age = age;
-		this.position = position;
-	}
-
-	/** 선수 아이디 */
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
-	
-	/** 선수 명 */
-	private String name;
-	
-	/** 선수 나이 */
-	private int age;
-
-	/** 선수 포지션 */
-	private String position;
+	@OneToOne
+	@JoinColumn(name = "locker_id")
+	private Locker locker;
 	
 }
 
 ```
+빌드 패턴에 작성된 코드를 한번 살펴보기 바란다.     
+
+이렇게 하는 이유는 객체 그래프 탐색을 위해서 작성하게 된다. 이것도 이후에 설명을 해볼까 한다.     
+
+또한 기존에는 편의를 위해서 롬복에서 제공하는 @ToString을 사용했지만 양방향인 경우에는 이것을 그대로 사용하면 안된다.    
+
+그래서 양방향으로 잡힌 필드는 제외를 해줘야 한다.     
+
+보통 두가지 방식으로 하나는 of를 써서 오버라이딩할때 사용할 필드명을 명시하던가 또는 exclude를 써서 오버라이딩할 때 제외할 필드를 명시할 수 있다.    
+
+사용할 필드가 제외할 필드보다 많으면 exclude로 제외할 필드를 명시하면 된다.    
+
+'근데요? 왜, 굳이 그렇게 해야 하나요?'    
+
+왜냐하면 Player가 club, locker를 가져오면 club과 locker입장에서는 또 player나 players를 다시 가져올 것이다. player에서는 또 .......
+
+이거 반복하다 stackoverflowe에러를 직면하게 될것이기 때문이다.     
+
+'진짜로 그래요? 진짜에요?'    
+
+말이 필요없다. 코드로 한번 보자.    
 
 Club
 
 ```
-package io.basquiat.model;
+package io.basquiat.model.football;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -685,7 +319,6 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
-import javax.persistence.JoinColumn;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
@@ -708,10 +341,9 @@ import lombok.ToString;
 public class Club {
 
 	@Builder
-	public Club(String name, int ranking, List<Player> players) {
+	public Club(String name, int ranking) {
 		this.name = name;
 		this.ranking = ranking;
-		this.players = players;
 	}
 
 	/** 클럽 아이디 */
@@ -725,165 +357,22 @@ public class Club {
 	/** 클럽 랭킹 순위 */
 	private int ranking;
 	
-	@OneToMany
-	@JoinColumn(name = "club_id")
-	List<Player> players = new ArrayList<>();
+	@OneToMany(mappedBy = "footballClub")
+	private List<Player> players = new ArrayList<>();
 	
 }
-
 ```
-
-좀 독특하게 Player쪽에는 fk가 전혀 없다. 그리고 Club쪽에 @OneToMany로 설정하고 @JoinColumn의 name을 club_id로 설정했다.     
-
-특히 이 경우에는 @JoinColumn을 생략하면 조인 테이블을 생성하는 전략을 사용하게 된다. 일단 이거는 뒤에 가서 확인해 보고 이렇게 했는데도 테이블을 생성하면 기존의 erd와 똑같이 테이블이 생성된다.    
-
-다만 이럴 경우는 관계가 역전되어진 상황이기 때문에 내부적으로 돌아가는 방식도 좀 특이하다.     
-
-주절이 말로 하면 좀 어려우니 코드와 결과를 보고 고민해 보자.     
-
-```
-package io.basquiat;
-
-import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
-import javax.persistence.EntityTransaction;
-import javax.persistence.Persistence;
-
-import io.basquiat.model.Club;
-import io.basquiat.model.Player;
-
-/**
- * 
- * created by basquiat
- *
- */
-public class jpaMain {
-
-    public static void main(String[] args) {
-        EntityManagerFactory emf = Persistence.createEntityManagerFactory("basquiat");
-        EntityManager em = emf.createEntityManager();
-        EntityTransaction tx = em.getTransaction();
-        tx.begin();
-        try {
-        	
-        	// 1. 손흥민은 축구 선수이다.
-        	Player son = Player.builder().name("손흥민")
-					        			 .age(27)
-					        			 .position("Striker")
-					        			 .build();
-        	em.persist(son);
-
-        	// 2. 토트넘이 손흥민 선수를 영입했다. 
-        	Club tottenhamFootballClub = Club.builder().name("Tottenham Hotspur Football Club")
-        											   .ranking(9)
-        											   .build();
-        	tottenhamFootballClub.getPlayers().add(son);
-        	em.persist(tottenhamFootballClub);
-        	tx.commit();
-        } catch(Exception e) {
-            tx.rollback();
-        } finally {
-            em.close();
-        }
-        emf.close();
-    }
-    
-}
-
-```
-
-입으로 설명하자면 이것도 상당히 합리적인것처럼 보이긴 한다. 로직의 흐름 자체가 손흥민 선수를 토트넘이 손흥민을 영입한 모양새를 띄고 있기 때문이다.
-    
-하지만 토트넘이 손흥민을 영입하는 코드 자체가 뭔가 부자연스럽다.     
-
-그럼 결과를 보자.
-
-```
-Hibernate: 
-    /* insert io.basquiat.model.Player
-        */ insert 
-        into
-            player
-            (age, name, position) 
-        values
-            (?, ?, ?)
-Hibernate: 
-    /* insert io.basquiat.model.Club
-        */ insert 
-        into
-            club
-            (name, ranking) 
-        values
-            (?, ?)
-Hibernate: 
-    /* create one-to-many row io.basquiat.model.Club.players */ update
-        player 
-    set
-        club_id=? 
-    where
-        id=?
-
-```
-
-'어라? 근데 업데이트는 뭐지?'라는 생각이 들게 된다.     
-
-당연하게도 JPA는 테이블의 연관관계를 객체로 추상화하는 과정에서 약간은 좀 억지로 끼워 맞춘 듯한 느낌도 살짝 든다. 아무래도 그 테이블과 객체와의 간극이 분명이 존재하기 때문인데 그런 관점에서 보자면 이것은 어찌보면 필연적인 것이다.     
-
-테이블의 erd의 모양새와는 좀 다르게 맵핑된 이 경우에는 손흥민를 클럽에서 영입을 했다. 그리고 나서 언론이나 신문사에 대대적으로 기사를 날릴 것이다.    
-
-'토트넘! 손흥민 영입'     
-
-그럼 이것을 객체의 관점이 아닌 데이터베이스의 관점에서 보자면 손흥민에 대한 선수 정보는 토트넘에 영입되기 전에는 '바이어 레버쿠젠'에 소속되어 있었기 때문에 Club입장에서는 손흥민을 영입했으니 손흥민의 소속팀 정보를 갱신해야 하는 것이다.    
-
-따라서 1:N 매핑을 시도한 JPA에서는 이 간극을 좁히기 위해 결국 DB에 손흥민의 정보에서 club_id를 갱신하는 쿼리를 날릴 수 밖에 없다.   
-
-결국 이 전략은 외래키가 대상 테이블에 존재하면서 생기는 단점으로 꼽는다.      
-
-책에서는 그래서 N:1 맵핑을 중심으로 이런 부분은 양방향으로 풀라고 권장하고 있다.    
-
-어째든 1:N에 대해서 알아봤다.    
-
-## @OneToOne     
-
-1:1 매핑에 대해서 알아보자.     
-
-지금 예제를 이어가보자. 선수는 물리적인 정보들 외에 연봉 정보와 국적, 취미등 외적인 정보를 담는 일종의 PlayerInformation객체를 가질 수 있다.     
-
-이런 경우라면 Player와 PlayerInformation의 관계는 1:1임을 알 수 있다.     
-
-또는 선수가 사용할 수 있는 락커를 예로 들수도 있겠다.        
-
-물론 한 선수가 1개 이상의 락커를 쓸 수도 있겠지만 일반적으로 선수 한명당 하나의 락커를 소유하게 된다.    
-
-실무의 예를 들면 Item, 즉 상품의 기본적인 정보들 외에도 상품에 걸려있는 정책이나 배송정책들이 상품마다 다 다를 수 있기 때문에 Item_policy, Item_Delivery같은 1:1로 매핑되는 테이블이 존재하기도 한다.    
-
-다시 우리는 예제로 돌아가서 가장 흔하게 예를 드는 락커에 포커스를 맞추자.    
-
-그러면 이런 고민이 들 것이다. 외래키는 어디에 있어야 하는가?    
-
-이 경우에는 락커에 선수 아이디를 외래키로 가질 수 있고 아니면 선수가 락커 아이디를 외래키로 가질 수 있다.     
-
-이것은 비지니스에 따라 달라질 것이다.    
-
-하지만 보통은 선수를 검색했을 때 락커의 정보, 클럽의 정보를 가져오는게 더 합리적이지 않을까? 물론 이 생각은 어플리케이션을 어떻게 해야하느냐에 따라서 달라질 것이다.     
-
-보통은 DBA가 있다면 정할 수 있지만 만일 내가 해야 한다면 어떻게 할까? 내 입장에서는 선수쪽에 락커 아이디를 외래키로 있는게 더 나아 보인다.    
-
-![실행이미지](https://github.com/basquiat78/completedJPA/blob/6.unary-relation-mapping/capture/capture3.png)    
-
-하지만 이건 어디까지나 나의 생각이다. 선택지일뿐 답은 없을 뿐더러 차후 배울 양방향 매핑으로 걸어버리면 끝날 일이다. 그러나 뒤에서 이와 관련 설명을 다시 한번 해볼것이다.    
-
-일단 Locker를 만들자.     
 
 Locker
 
 ```
-package io.basquiat.model;
+package io.basquiat.model.football;
 
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.OneToOne;
 import javax.persistence.Table;
 
 import lombok.AccessLevel;
@@ -920,14 +409,20 @@ public class Locker {
 
 	/** 락커가 있는 위치 정보 */
 	private String position;
+	
+	@OneToOne(mappedBy = "locker")
+	private Player player;
+	
+	public void matchingPlayer(Player player) {
+		this.player = player;
+	}
 }
-
 ```
 
 Player
 
 ```
-package io.basquiat.model;
+package io.basquiat.model.football;
 
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -957,12 +452,14 @@ import lombok.ToString;
 public class Player {
 
 	@Builder
-	public Player(String name, int age, String position, Club club, Locker locker) {
+	public Player(String name, int age, String position, Club footballClub, Locker locker) {
 		this.name = name;
 		this.age = age;
 		this.position = position;
-		this.club = club;
+		this.footballClub = footballClub;
+		footballClub.getPlayers().add(this);
 		this.locker = locker;
+		locker.matchingPlayer(this);
 	}
 
 	/** 선수 아이디 */
@@ -981,105 +478,69 @@ public class Player {
 	
 	@ManyToOne
 	@JoinColumn(name = "club_id")
-	private Club club;
+	private Club footballClub;
 	
 	@OneToOne
 	@JoinColumn(name = "locker_id")
 	private Locker locker;
 	
 }
+```
+@ToString에서 exclude한 것을 다 지우고 한번 실행해 보자.
 
 ```
+// 1. 내가 들어가고 싶은 팀이 무엇인지 살펴본다.
+Club tottenhamFootballClub = Club.builder().name("Tottenham Hotspur Football Club")
+										   .ranking(9)
+										   .build();
+em.persist(tottenhamFootballClub);
 
-그럼 한번 코드를 실행해 보자.
+Locker sonsLocker = Locker.builder().name("손흥민의 락커")
+									.position("입구에서 4번째 위치")
+									.build();
+em.persist(sonsLocker);
 
+// 2. 손흥민이 토트넘으로 들어간다.
+Player son = Player.builder().name("손흥민")
+							 .age(27)
+							 .position("Striker")
+							 .footballClub(tottenhamFootballClub)
+							 .locker(sonsLocker)
+							 .build();
+em.persist(son);
+System.out.println(son.toString());
+tx.commit();
 ```
 
-package io.basquiat;
+어떤 일이 벌어질까?    
 
-import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
-import javax.persistence.EntityTransaction;
-import javax.persistence.Persistence;
-
-import io.basquiat.model.Club;
-import io.basquiat.model.Locker;
-import io.basquiat.model.Player;
-
-/**
- * 
- * created by basquiat
- *
- */
-public class jpaMain {
-
-    public static void main(String[] args) {
-        EntityManagerFactory emf = Persistence.createEntityManagerFactory("basquiat");
-        EntityManager em = emf.createEntityManager();
-        EntityTransaction tx = em.getTransaction();
-        tx.begin();
-        try {
-        	
-        	// 1. 내가 들어가고 싶은 팀이 무엇인지 살펴본다.
-        	Club tottenhamFootballClub = Club.builder().name("Tottenham Hotspur Football Club")
-        											   .ranking(9)
-        											   .build();
-        	em.persist(tottenhamFootballClub);
-
-        	Locker sonsLocker = Locker.builder().name("손흥민의 락커")
-        										.position("입구에서 4번째 위치")
-        										.build();
-        	em.persist(sonsLocker);
-        	
-        	// 2. 손흥민이 토트넘으로 들어간다.
-        	Player son = Player.builder().name("손흥민")
-        								 .age(27)
-        								 .position("Striker")
-        								 .club(tottenhamFootballClub)
-        								 .locker(sonsLocker)
-        								 .build();
-        	em.persist(son);
-        	tx.commit();
-        } catch(Exception e) {
-            tx.rollback();
-        } finally {
-            em.close();
-        }
-        emf.close();
-    }
-    
-}
 
 ```
-
-결과는 뭐 안봐도 비디오    
-
-```
-7월 13, 2020 12:23:12 오전 org.hibernate.jpa.internal.util.LogHelper logPersistenceUnitInformation
+7월 18, 2020 12:28:11 오후 org.hibernate.jpa.internal.util.LogHelper logPersistenceUnitInformation
 INFO: HHH000204: Processing PersistenceUnitInfo [name: basquiat]
-7월 13, 2020 12:23:12 오전 org.hibernate.Version logVersion
+7월 18, 2020 12:28:11 오후 org.hibernate.Version logVersion
 INFO: HHH000412: Hibernate ORM core version 5.4.17.Final
-7월 13, 2020 12:23:13 오전 org.hibernate.annotations.common.reflection.java.JavaReflectionManager <clinit>
+7월 18, 2020 12:28:12 오후 org.hibernate.annotations.common.reflection.java.JavaReflectionManager <clinit>
 INFO: HCANN000001: Hibernate Commons Annotations {5.1.0.Final}
-7월 13, 2020 12:23:14 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl configure
+7월 18, 2020 12:28:13 오후 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl configure
 WARN: HHH10001002: Using Hibernate built-in connection pool (not for production use!)
-7월 13, 2020 12:23:14 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl buildCreator
+7월 18, 2020 12:28:13 오후 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl buildCreator
 INFO: HHH10001005: using driver [com.mysql.cj.jdbc.Driver] at URL [jdbc:mysql://localhost:3306/basquiat?rewriteBatchedStatements=true&useUnicode=yes&characterEncoding=UTF-8&serverTimezone=Asia/Seoul]
-7월 13, 2020 12:23:14 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl buildCreator
+7월 18, 2020 12:28:13 오후 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl buildCreator
 INFO: HHH10001001: Connection properties: {user=basquiat, password=****}
-7월 13, 2020 12:23:14 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl buildCreator
+7월 18, 2020 12:28:13 오후 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl buildCreator
 INFO: HHH10001003: Autocommit mode: false
-7월 13, 2020 12:23:14 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl$PooledConnections <init>
+7월 18, 2020 12:28:13 오후 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl$PooledConnections <init>
 INFO: HHH000115: Hibernate connection pool size: 20 (min=1)
-7월 13, 2020 12:23:15 오전 org.hibernate.dialect.Dialect <init>
+7월 18, 2020 12:28:14 오후 org.hibernate.dialect.Dialect <init>
 INFO: HHH000400: Using dialect: org.hibernate.dialect.MySQL5InnoDBDialect
 Hibernate: 
     
     alter table player 
        drop 
        foreign key FKh60stqlv4r5dk5hp5gcwvo0n7
-7월 13, 2020 12:23:16 오전 org.hibernate.resource.transaction.backend.jdbc.internal.DdlTransactionIsolatorNonJtaImpl getIsolatedConnection
-INFO: HHH10001501: Connection obtained from JdbcConnectionAccess [org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator$ConnectionProviderJdbcConnectionAccess@28952dea] for (non-JTA) DDL execution was not in auto-commit mode; the Connection 'local transaction' will be committed and the Connection will be set into auto-commit mode.
+7월 18, 2020 12:28:15 오후 org.hibernate.resource.transaction.backend.jdbc.internal.DdlTransactionIsolatorNonJtaImpl getIsolatedConnection
+INFO: HHH10001501: Connection obtained from JdbcConnectionAccess [org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator$ConnectionProviderJdbcConnectionAccess@6443b128] for (non-JTA) DDL execution was not in auto-commit mode; the Connection 'local transaction' will be committed and the Connection will be set into auto-commit mode.
 Hibernate: 
     
     alter table player 
@@ -1102,8 +563,8 @@ Hibernate:
         ranking integer not null,
         primary key (id)
     ) engine=InnoDB
-7월 13, 2020 12:23:16 오전 org.hibernate.resource.transaction.backend.jdbc.internal.DdlTransactionIsolatorNonJtaImpl getIsolatedConnection
-INFO: HHH10001501: Connection obtained from JdbcConnectionAccess [org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator$ConnectionProviderJdbcConnectionAccess@9f6e406] for (non-JTA) DDL execution was not in auto-commit mode; the Connection 'local transaction' will be committed and the Connection will be set into auto-commit mode.
+7월 18, 2020 12:28:15 오후 org.hibernate.resource.transaction.backend.jdbc.internal.DdlTransactionIsolatorNonJtaImpl getIsolatedConnection
+INFO: HHH10001501: Connection obtained from JdbcConnectionAccess [org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator$ConnectionProviderJdbcConnectionAccess@847f3e7] for (non-JTA) DDL execution was not in auto-commit mode; the Connection 'local transaction' will be committed and the Connection will be set into auto-commit mode.
 Hibernate: 
     
     create table locker (
@@ -1135,10 +596,10 @@ Hibernate:
        add constraint FKdh2ff6dcjjgupccm2pmddouhw 
        foreign key (locker_id) 
        references locker (id)
-7월 13, 2020 12:23:16 오전 org.hibernate.engine.transaction.jta.platform.internal.JtaPlatformInitiator initiateService
+7월 18, 2020 12:28:15 오후 org.hibernate.engine.transaction.jta.platform.internal.JtaPlatformInitiator initiateService
 INFO: HHH000490: Using JtaPlatform implementation: [org.hibernate.engine.transaction.jta.platform.internal.NoJtaPlatform]
 Hibernate: 
-    /* insert io.basquiat.model.Club
+    /* insert io.basquiat.model.football.Club
         */ insert 
         into
             club
@@ -1146,7 +607,7 @@ Hibernate:
         values
             (?, ?)
 Hibernate: 
-    /* insert io.basquiat.model.Locker
+    /* insert io.basquiat.model.football.Locker
         */ insert 
         into
             locker
@@ -1154,163 +615,1174 @@ Hibernate:
         values
             (?, ?)
 Hibernate: 
-    /* insert io.basquiat.model.Player
+    /* insert io.basquiat.model.football.Player
         */ insert 
         into
             player
             (age, club_id, locker_id, name, position) 
         values
             (?, ?, ?, ?, ?)
-7월 13, 2020 12:23:16 오전 org.hibernate.engine.internal.StatisticalLoggingSessionEventListener end
-INFO: Session Metrics {
-    426000 nanoseconds spent acquiring 1 JDBC connections;
-    413700 nanoseconds spent releasing 1 JDBC connections;
-    15898000 nanoseconds spent preparing 3 JDBC statements;
-    6655000 nanoseconds spent executing 3 JDBC statements;
-    0 nanoseconds spent executing 0 JDBC batches;
-    0 nanoseconds spent performing 0 L2C puts;
-    0 nanoseconds spent performing 0 L2C hits;
-    0 nanoseconds spent performing 0 L2C misses;
-    7436200 nanoseconds spent executing 1 flushes (flushing a total of 3 entities and 0 collections);
-    0 nanoseconds spent executing 0 partial-flushes (flushing a total of 0 entities and 0 collections)
-}
-7월 13, 2020 12:23:16 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl$PoolState stop
-INFO: HHH10001008: Cleaning up connection pool [jdbc:mysql://localhost:3306/basquiat?rewriteBatchedStatements=true&useUnicode=yes&characterEncoding=UTF-8&serverTimezone=Asia/Seoul]
+Exception in thread "main" java.lang.StackOverflowError
+	at java.lang.Long.toString(Long.java:396)
+	at java.lang.Long.toString(Long.java:1032)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Club.toString(Club.java:28)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at io.basquiat.model.football.Player.toString(Player.java:27)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
+	at java.util.AbstractCollection.toString(AbstractCollection.java:462)
+	at org.hibernate.collection.internal.PersistentBag.toString(PersistentBag.java:622)
+	at java.lang.String.valueOf(String.java:2994)
+	at java.lang.StringBuilder.append(StringBuilder.java:131)
 
 ```
+'뭐야 이 긴 에러는?' 하고 놀랐을 수도 있다.     
 
-옵션을 none으로 두고 셀렉트를 한번 해보게 되면
+그냥 내 콘솔에 찍힌거 그대로 복사해서 붙였다.    
+
+보면 각 엔티티에서 서로를 계속 참조하다가 Exception in thread "main" java.lang.StackOverflowError를 보게 된다.    
+
+자 그리고 연관관계 편의 메소드가 없다면 어떤 일이 일어날까?    
+
+Player
 
 ```
-Player son = em.find(Player.class, 1L);
+	@Builder
+	public Player(String name, int age, String position, Club footballClub, Locker locker) {
+		this.name = name;
+		this.age = age;
+		this.position = position;
+		this.footballClub = footballClub;
+		//footballClub.getPlayers().add(this);
+		this.locker = locker;
+		//locker.matchingPlayer(this);
+	}
+```
+주석 처리를 하고 
+
+```
+// 1. 내가 들어가고 싶은 팀이 무엇인지 살펴본다.
+Club tottenhamFootballClub = Club.builder().name("Tottenham Hotspur Football Club")
+										   .ranking(9)
+										   .build();
+em.persist(tottenhamFootballClub);
+
+Locker sonsLocker = Locker.builder().name("손흥민의 락커")
+									.position("입구에서 4번째 위치")
+									.build();
+em.persist(sonsLocker);
+
+// 2. 손흥민이 토트넘으로 들어간다.
+Player son = Player.builder().name("손흥민")
+							 .age(27)
+							 .position("Striker")
+							 .footballClub(tottenhamFootballClub)
+							 .locker(sonsLocker)
+							 .build();
+em.persist(son);
 System.out.println(son.toString());
-
+System.out.println(sonsLocker.getPlayer());
+System.out.println(tottenhamFootballClub.getPlayers());
 ```
 
-결과는 
+이 코드를 실행하게 되면    
 
 ```
-7월 13, 2020 12:25:25 오전 org.hibernate.jpa.internal.util.LogHelper logPersistenceUnitInformation
-INFO: HHH000204: Processing PersistenceUnitInfo [name: basquiat]
-7월 13, 2020 12:25:25 오전 org.hibernate.Version logVersion
-INFO: HHH000412: Hibernate ORM core version 5.4.17.Final
-7월 13, 2020 12:25:25 오전 org.hibernate.annotations.common.reflection.java.JavaReflectionManager <clinit>
-INFO: HCANN000001: Hibernate Commons Annotations {5.1.0.Final}
-7월 13, 2020 12:25:26 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl configure
-WARN: HHH10001002: Using Hibernate built-in connection pool (not for production use!)
-7월 13, 2020 12:25:26 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl buildCreator
-INFO: HHH10001005: using driver [com.mysql.cj.jdbc.Driver] at URL [jdbc:mysql://localhost:3306/basquiat?rewriteBatchedStatements=true&useUnicode=yes&characterEncoding=UTF-8&serverTimezone=Asia/Seoul]
-7월 13, 2020 12:25:26 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl buildCreator
-INFO: HHH10001001: Connection properties: {user=basquiat, password=****}
-7월 13, 2020 12:25:26 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl buildCreator
-INFO: HHH10001003: Autocommit mode: false
-7월 13, 2020 12:25:26 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl$PooledConnections <init>
-INFO: HHH000115: Hibernate connection pool size: 20 (min=1)
-7월 13, 2020 12:25:27 오전 org.hibernate.dialect.Dialect <init>
-INFO: HHH000400: Using dialect: org.hibernate.dialect.MySQL5InnoDBDialect
-7월 13, 2020 12:25:28 오전 org.hibernate.engine.transaction.jta.platform.internal.JtaPlatformInitiator initiateService
-INFO: HHH000490: Using JtaPlatform implementation: [org.hibernate.engine.transaction.jta.platform.internal.NoJtaPlatform]
 Hibernate: 
-    select
-        player0_.id as id1_2_0_,
-        player0_.age as age2_2_0_,
-        player0_.club_id as club_id5_2_0_,
-        player0_.locker_id as locker_i6_2_0_,
-        player0_.name as name3_2_0_,
-        player0_.position as position4_2_0_,
-        club1_.id as id1_0_1_,
-        club1_.name as name2_0_1_,
-        club1_.ranking as ranking3_0_1_,
-        locker2_.id as id1_1_2_,
-        locker2_.name as name2_1_2_,
-        locker2_.position as position3_1_2_ 
-    from
-        player player0_ 
-    left outer join
-        club club1_ 
-            on player0_.club_id=club1_.id 
-    left outer join
-        locker locker2_ 
-            on player0_.locker_id=locker2_.id 
-    where
-        player0_.id=?
-Player(id=1, name=손흥민, age=27, position=Striker, club=Club(id=1, name=Tottenham Hotspur Football Club, ranking=9), locker=Locker(id=1, name=손흥민의 락커, position=입구에서 4번째 위치))
-7월 13, 2020 12:25:28 오전 org.hibernate.engine.internal.StatisticalLoggingSessionEventListener end
-INFO: Session Metrics {
-    526400 nanoseconds spent acquiring 1 JDBC connections;
-    421700 nanoseconds spent releasing 1 JDBC connections;
-    12557400 nanoseconds spent preparing 1 JDBC statements;
-    1784200 nanoseconds spent executing 1 JDBC statements;
-    0 nanoseconds spent executing 0 JDBC batches;
-    0 nanoseconds spent performing 0 L2C puts;
-    0 nanoseconds spent performing 0 L2C hits;
-    0 nanoseconds spent performing 0 L2C misses;
-    8766800 nanoseconds spent executing 1 flushes (flushing a total of 3 entities and 0 collections);
-    0 nanoseconds spent executing 0 partial-flushes (flushing a total of 0 entities and 0 collections)
-}
-7월 13, 2020 12:25:28 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl$PoolState stop
-INFO: HHH10001008: Cleaning up connection pool [jdbc:mysql://localhost:3306/basquiat?rewriteBatchedStatements=true&useUnicode=yes&characterEncoding=UTF-8&serverTimezone=Asia/Seoul]
-
+    /* insert io.basquiat.model.football.Club
+        */ insert 
+        into
+            club
+            (name, ranking) 
+        values
+            (?, ?)
+Hibernate: 
+    /* insert io.basquiat.model.football.Locker
+        */ insert 
+        into
+            locker
+            (name, position) 
+        values
+            (?, ?)
+Hibernate: 
+    /* insert io.basquiat.model.football.Player
+        */ insert 
+        into
+            player
+            (age, club_id, locker_id, name, position) 
+        values
+            (?, ?, ?, ?, ?)
+Player(id=1, name=손흥민, age=27, position=Striker)
+null
+[]
 ```
+어라? 아무것도 없넹.    
 
-책에서는 1:1과 관련해서 많은 이야기들을 하고 있다.    
+엔티티입장에서는 당연히 그럴 것이라는 생각이 든다. 값을 세팅받은 적이 없기 때문인데 책에서는 비록 연관관계에 주인이 아니더라도 양쪽으로 값을 매핑해 주는 것을 권장한다.    
 
-특히 이런 관계에서 외래키를 어디에 두고 매핑을 하냐에 대한 부분인데 둘다 장단점을 이야기하고 있다.    
+이유는 조금 생각해 보면 비지니스 로직이 들어가는 경우에는 객체 그래프 탐색을 통해서 양쪽에서 값을 꺼내와야 하는 경우도 생길 수 있기 때문이다.    
 
-간략하게 위 예제로 설명하자면 다음과 같다.    
+자 우리는 심플하게 양방향 매핑에 대해서 어느 정도 감을 잡았다.     
 
-1. Player가 외래키를 관리할 때    
-	- Player만 조회해도 Locker정보를 함께 가져올 수 있다. 즉 JPA입장에서 매핑하기가 편하다.
-	- 하지만 단점으로는 만일 Locker가 없다면 (예를 들면 새로 영입되서 아직 Locker가 배정되지 않는 상황을 생각해보자.) 해당 locker_id는 null을 허용해야 한다.    
+간략하게 요략을 하자면    
 
-2. Locker가 외래키를 관리할 때    
-	- 1:1 매핑이 깨질경우. 위에서 언급했던 선수가 1개 이상의 락커를 사용할수 있게 변경되었을 때 테이블을 변경하지 않아도 된다.    
-	- 단점으로는 차후 뒤에서 배울 lazy옵션을 걸어도 eager방식으로 작동하게 된다.    
-	
-	
-이 이야기는 사실 DBA관점, 개발자의 관점에 대한 부분이다.    
+1. 단방향에서 양방향으로 매핑시 대상 객체에서 그와 반대대는, 예를 들면 OneToMany이면 대상 객체에서는 ManyToOne, ManyToOne이면 OneToMany, OneToOne이면 OneToOne으로 매핑을 한다.    
 
-만일 DBA가 존재한다면 이 부분에 대해서 많은 이야기를 해야한다는 것이다.    
+2. 연관관계 주인을 설정할 때는 외래키를 관리하는 엔티티가 주인이 되기 때문에 양방향 매핑시에는 주인을 설정하는 mappedBy로 그 관계를 명시한다.    
 
-특히 나는 locker_id에 null을 허용해야 하는게 단점이라는 것일 이해하지 못했다.       
+3. Lombok의 ToString이나 toString을 오버라이딩해서 직접 생성하는 경우에는 양방향으로 걸린 엔티티는 제외한다. (stackoverflowerror) 코딩 당시 또는 서버가 올라갈 때는 모르지만 이와 관련된 메소드 호출시 발생하는 잠재적인 오류     
 
-하지만 DB입장에서는 그게 부담이 되는 모양이다.    
+## 지금까지 배운 연관관계 매핑을 실무로 한번 옮겨보자.    
 
-암튼 이것은 그냥 넘어가자. 난 DBA가 아니라서....     
+이제 실제로 배운 것을 여러분들의 회사의 erd를 보고 실제로 매핑하는 것을 해볼 시간이다.     
 
+지금 하는 예제는 회사의 주문 테이블을 살짝 가져왔다. 물론 컬럼들이 좀 많아서 필요한 요소들만 가져왔다.     
 
-## @ManyToMany    
+한번 erd를 보고 또는 여러분이 만들고자 하는 어플리케이션의 erd나 이것은 꼭 JPA로 매핑해보고싶다는 erd를 보고 직접 해보는 시간을 가벼보길 바란다.   
 
-일단 책에서는 JPA의 표준스펙이긴 하지만 실무에서 사용하는 것을 권장하지 않는다.    
+일단 주문과 관련된 간략한 erd를 보자. 실제로 회사에서 사용하는 테이블인데 basquiat를 prefix로 붙인 테이블명을 사용하고 있다.    
 
-이것은 잘 생각해보면 알 수 있는데 DB관점에서 테이블을 두고 생각하면 정규화된 (pk, fk) 테이블애서는 말이 안되는 관계이기 때문이다.     
+![실행이미지](https://github.com/basquiat78/completedJPA/blob/7.bidirectional-relation-mapping/capture/capture1.png)    
 
-하지만 의외로 커머스에서는 이런 관계를 생각해 볼 수 있다.    
+ManyToMany의 경우에는 Item과 Order의 관계를 erd로는 표현할 수 없어서 실제 JPA를 ManyToMany로 잡을 때 생성되는 브릿지 테이블을 생각하고 만들었다.    
 
-예를 들면 고객은 여러개의 상품을 선택해서 주문할 수 있고 상품 역시 여러 명의 고객들의 주문에 속할 수 있다.        
+이것을 보면 많은 테이블과의 연관관계에서 일단 '키맨'을 찾아야 한다.     
 
-그래서 보통 이것들을 해소하기 위해 매핑하는 테이블이 중간에 껴 있다는 것을 알 수 있다.    
+배송 정보와 관련한 Delivery테이블의 경우에도 OneToOne인데 Order가 외래키를 갖는게 객체 탐색 그래프에서 더 유리하다고 판단해서 Order가 외래키를 갖는 erd로 그렸다.    
 
-디비관점에서는 그렇다는 것이고 객체 관점에서는 사용자는 상품의 리스트를 가질 수 있고 상품 역시 자신을 구입하거나 장바구니에 담은 고객의 리스트를 가질 수 있다.    
+눈썰미 있으신 분이라면 Order가 '키맨'임을 알 수 있다.    
 
-그렇다면 @ManyToMany는 중간에 어떤 테이블을 생성해서 1:N, N:1로 서로 연결될 것이라는 것을 알 수 있다.    
-
-일단 한번 코딩으로 해보자.    
+자 그러면 이제 한번 이것을 중심으로 엔티티를 만들어보자.    
 
 Member
 
 ```
-package io.basquiat.model;
+package io.basquiat.model.item;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
-import javax.persistence.JoinTable;
-import javax.persistence.ManyToMany;
+import javax.persistence.OneToMany;
+import javax.persistence.PrePersist;
 import javax.persistence.Table;
 
 import lombok.AccessLevel;
@@ -1325,46 +1797,173 @@ import lombok.ToString;
  *
  */
 @Entity
-@Table(name = "member")
+@Table(name = "basquiat_member")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@ToString
+@ToString(exclude = "orders")
 public class Member {
 
 	@Builder
-	public Member(String name, String address) {
+	public Member(String name, String email, String phone, String address) {
 		this.name = name;
+		this.email = email;
+		this.phone = phone;
 		this.address = address;
 	}
 	
+	/** */
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 	
+	/** 고객 명 */
+	@Column(name = "mb_name")
 	private String name;
 	
+	/** 고객 이메일 */
+	@Column(name = "mb_email")
+	private String email;
+	
+	/** 고객 폰번호 */
+	@Column(name = "mb_phone")
+	private String phone;
+	
+	/** 고객 주소 */
+	@Column(name = "mb_address")
 	private String address;
 	
+	/** 가입일 */
+	@Column(name = "signup_at")
+	private LocalDateTime signupAt;
+	
+	@OneToMany(mappedBy = "member")
+	private List<Order> orders = new ArrayList<>();
+	
+	/** insert할때 현재 시간으로 인서트한다. */
+    @PrePersist
+    protected void setUpSignupAt() {
+    	signupAt = LocalDateTime.now();
+    }
+	
+}
+```
+
+Order와 Member의 연관관계에서 Member기준을 보면 erd에서도 알 수 있듯이 OneToMany관계임을 알 수 있다.    
+    
+따라서 OneToMany관계를 설정하고 연관관계의 주인이 Order가 품고 있는 member가 주인이라는 메세지를 보내는 mappedBy를 설정했다.
+
+Order
+
+```
+package io.basquiat.model.item;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.JoinTable;
+import javax.persistence.ManyToMany;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToOne;
+import javax.persistence.PrePersist;
+import javax.persistence.Table;
+
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+
+/**
+ * 
+ * created by basquiat
+ *
+ */
+@Entity
+@Table(name = "basquiat_order")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@ToString(exclude = {"member", "delivery", "items"})
+public class Order {
+
+	/** 주문 번호 생성 */
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+	
+	/** 주문 상태 */
+	@Enumerated(EnumType.STRING)
+	private OrderStatus status;
+	
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "member_id")
+	private Member member;
+	
+	@OneToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "delivery_id")
+	private Delivery delivery;
+	
+	/**
+	 * ManyToMany는 내부적으로 bridge Table을 생성하게 된다.
+	 * 1. order_item테이블을 생성한다.
+	 * 2. Order입장에서는 생성된 테이블과의 조인되는 컬럼을 order_id로 설정한다.
+	 * 3. 대상 테이블에서의 item으로 가는 방향도 고려해서 inverseJoinColumns으로 설정한다.
+	 */
 	@ManyToMany
-	@JoinTable(name = "member_item")
+	@JoinTable(name = "order_item",
+			   joinColumns = @JoinColumn(name = "order_id"),
+			   inverseJoinColumns = @JoinColumn(name = "item_id")
+	)
 	private List<Item> items = new ArrayList<>();
+	
+	/** 주문 일자 */
+	@Column(name = "order_at")
+	private LocalDateTime orderAt;
+	
+	/** insert할때 현재 시간으로 인서트한다. */
+    @PrePersist
+    protected void setUpSignupAt() {
+    	orderAt = LocalDateTime.now();
+    }
 	
 }
 
 ```
-이때 @JoinTable을 통해서 member_item이라는 테이블을 생성한다는 것을 알 수 있다.
+Order의 경우 사실 내부적으로 밀리세컨드로 변경한 날짜와 고객 아이디의 조합으로 고유한 주문 번호를 생성하지만 여기서는 좀 귀찮아서....    
 
+일단 ManyToMany의 관계를 설정하기 위해서 다음과 같은 방식을 선택했다.    
 
+1. 애초에 DB관점에서는 ManyToMany라는 관계 자체가 없기 때문에 내부적으로 중간 테이블을 중간에 두고 연관관계를 맺는다.    
 
-Item
+3. Order엔티티를 기준으로 새로 생성된 테이블과의 관계에서 조인할 컬럼을 설정한다.     
+
+4. 양방향으로 설정된 관계에서 중간 테이블에서 item으로 연관관계가 설정될 때 Item과 중간 테이블이 조인될 컬럼을 inverseJoinColumns를 통해서 매핑해 준다.    
+
+이런 형식으로 진행한다.     
+
+그럼 Item쪽도 보자.     
 
 ```
-package io.basquiat.model;
+package io.basquiat.model.item;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.ManyToMany;
+import javax.persistence.PrePersist;
+import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 
 import lombok.AccessLevel;
@@ -1379,158 +1978,685 @@ import lombok.ToString;
  *
  */
 @Entity
-@Table(name = "item")
+@Table(name = "basquiat_item")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@ToString(exclude = "orders")
+public class Item {
+	
+	@Builder
+	public Item(String id, String name, String model) {
+		this.id = id;
+		this.name = name;
+		this.model = model;
+	}
+	
+	/** 상품 코드 */
+	@Id
+	private String id;
+	
+	/** 상품 명 */
+	@Column(name = "it_name")
+	private String name;
+
+	/** 상품 모델명 */
+	@Column(name = "it_model")
+	private String model;
+	
+	@ManyToMany(mappedBy = "items")
+	private List<Order> orders = new ArrayList<>();
+	
+	/** 상품 생성일 */
+	@Column(name = "created_at")
+	private LocalDateTime createdAt;
+	
+	/** 상품 수정일 */
+	@Column(name = "updated_at")
+	private LocalDateTime updatedAt;
+	
+	/** insert할때 현재 시간으로 인서트한다. */
+    @PrePersist
+    protected void setUpCreatedAt() {
+    	createdAt = LocalDateTime.now();
+    }
+
+    /** update 이벤트가 발생시에 업데이트된 시간으로 update */
+    @PreUpdate
+    protected void onUpdate() {
+    	updatedAt = LocalDateTime.now();
+    }
+    
+}
+```
+Order와의 ManyToMany에서 주인관계 설정하는 것으로 끝.    
+
+마지막 Delivery
+
+```
+package io.basquiat.model.item;
+
+import java.time.LocalDateTime;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.OneToOne;
+import javax.persistence.PrePersist;
+import javax.persistence.PreUpdate;
+import javax.persistence.Table;
+
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+
+@Entity
+@Table(name = "basquiat_delivery")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@ToString(exclude = "order")
+public class Delivery {
+	
+	/** 배송 번호 생성 */
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+
+	/** 택배사 코드 */
+	private String courier;
+	
+	/** 배송 상태 */
+	@Enumerated(EnumType.STRING)
+	private DeliveryStatus status;
+	
+	/** 배송지 */
+	private String place;
+
+	@OneToOne(mappedBy = "delivery")
+	private Order order;
+	
+	/** 배송 시작일 */
+	@Column(name = "delivery_at")
+	private LocalDateTime deliveryAt;
+	
+	/** 배송 상태가 변경될 때마다 업데이트 */
+	@Column(name = "completed_at")
+	private LocalDateTime completedAt;
+	
+	/** insert할때 현재 시간으로 인서트한다. */
+    @PrePersist
+    protected void setUpDeliveryAt() {
+    	deliveryAt = LocalDateTime.now();
+    }
+
+    /** update 이벤트가 발생시에 업데이트된 시간으로 update */
+    @PreUpdate
+    protected void onUpdate() {
+    	completedAt = LocalDateTime.now();
+    }
+	
+	
+}
+```
+Order와의 OneToOne설정후 주인 설정하는 것으로 끝냈다.    
+
+자 그럼 이제 메핑이 전부 완료가 되었으니 hibernate.hbm2ddl.auto를 create로 두고 제대로 생성이 되는지 한번 확인을 해보자.    
+
+```
+Hibernate: 
+    
+    alter table basquiat_order 
+       drop 
+       foreign key FK563g01judd0kln0c307jt85x7
+Hibernate: 
+    
+    alter table basquiat_order 
+       drop 
+       foreign key FKf2swmba3h8fiegrxcoek3dgvw
+Hibernate: 
+    
+    alter table order_item 
+       drop 
+       foreign key FKbin80ha4ltv41q82ylsh8q7um
+Hibernate: 
+    
+    alter table order_item 
+       drop 
+       foreign key FKd3gknfwli98awr8t5kvjqanyv
+Hibernate: 
+    
+    drop table if exists basquiat_delivery
+Hibernate: 
+    
+    drop table if exists basquiat_item
+Hibernate: 
+    
+    drop table if exists basquiat_member
+Hibernate: 
+    
+    drop table if exists basquiat_order
+Hibernate: 
+    
+    drop table if exists order_item
+Hibernate: 
+    
+    create table basquiat_delivery (
+       id bigint not null auto_increment,
+        completed_at datetime,
+        courier varchar(255),
+        delivery_at datetime,
+        place varchar(255),
+        status varchar(255),
+        primary key (id)
+    ) engine=InnoDB
+Hibernate: 
+    
+    create table basquiat_item (
+       id varchar(255) not null,
+        created_at datetime,
+        it_model varchar(255),
+        it_name varchar(255),
+        updated_at datetime,
+        primary key (id)
+    ) engine=InnoDB
+Hibernate: 
+    
+    create table basquiat_member (
+       id bigint not null auto_increment,
+        mb_address varchar(255),
+        mb_email varchar(255),
+        mb_name varchar(255),
+        mb_phone varchar(255),
+        signup_at datetime,
+        primary key (id)
+    ) engine=InnoDB
+Hibernate: 
+    
+    create table basquiat_order (
+       id bigint not null auto_increment,
+        order_at datetime,
+        status varchar(255),
+        delivery_id bigint,
+        member_id bigint,
+        primary key (id)
+    ) engine=InnoDB
+Hibernate: 
+    
+    create table order_item (
+       order_id bigint not null,
+        item_id varchar(255) not null
+    ) engine=InnoDB
+Hibernate: 
+    
+    alter table basquiat_order 
+       add constraint FK563g01judd0kln0c307jt85x7 
+       foreign key (delivery_id) 
+       references basquiat_delivery (id)
+Hibernate: 
+    
+    alter table basquiat_order 
+       add constraint FKf2swmba3h8fiegrxcoek3dgvw 
+       foreign key (member_id) 
+       references basquiat_member (id)
+Hibernate: 
+    
+    alter table order_item 
+       add constraint FKbin80ha4ltv41q82ylsh8q7um 
+       foreign key (item_id) 
+       references basquiat_item (id)
+Hibernate: 
+    
+    alter table order_item 
+       add constraint FKd3gknfwli98awr8t5kvjqanyv 
+       foreign key (order_id) 
+       references basquiat_order (id)
+```
+다른 로그는 다 지우고 테이블이 생성된 쿼리를 한번 보자.    
+
+기존의 있는 테이블을 Drop하는 쿼리가 보인다. 지워진 테이블은 다음과 같다.     
+
+basquiat_delivery, basquiat_item, basquiat_member, basquiat_order, order_item    
+
+'저기요? 잠시만요? 이 생뚱맞은 order_item은 어디서 나온건가요?'     
+
+'ManyToMany, 즉 다대다 양방향 매핑중에 생긴 넘입지요. Order엔티티의 매핑 관계를 잘 살펴보아요'     
+
+그 이후에 alter를 통해 외래키 설정을 하는 쿼리가 날아간 것을 볼 수 있다. ManyToMany에서 생성된 이 생뚱 맞은 테이블에도 item_id, order_id를 외래키로 잡는 모습도 포착되었다.     
+
+하지만 우리는 책에서 그리고 수많은 블로그의 이야기들을 보면 이것은 절대로 ~Naver Die~~ 쓰지말라고 권장한다.     
+
+자 그러면 우리는 이것을 그전에 중간에 저렇게 생성되는 테이블을 엔티티로 격상시켜서 이것을 발라버릴 것이다.    
+
+그리고 실제로도 다음과 같이 회사내에서는 basquiat_order_detail이라는 테이블을 통해서 이 부분을 처리하고 있다.     
+
+아마도 대부분 이런 방식을 이커머스에서는 사용하지 않을까 싶은데?     
+
+보통 우리가 구입하기 전에 장바구니에 상품을 담는 모습을 생각해 보자. 한번의 주문에 여러개의 상품이 리스트로 들어와 있는 형태말이다.     
+
+그리고 그 중에 체크 박스로 실제 사고 싶은 상품을 모아서 하나의 주문으로 묶는 것을 너무나 잘 알수 있다.    
+
+~~이거 왜이래요? 다들 쇼핑몰에서 상품 사본적 없는 것처럼!~~     
+
+그럼 erd를 한번 그려보자.     
+
+![실행이미지](https://github.com/basquiat78/completedJPA/blob/7.bidirectional-relation-mapping/capture/capture2.png)    
+
+자 중간에 baquiat_order_detail부분을 한번 살펴보자.    
+
+저 erd를 보면 Order와 OrderDetail의 관계를 살펴봐야 한다. 사실 Order가 중심으로 OrderDetail과의 관계를 따져보면 Order가 왠지 주인이 될 것 같다.     
+
+하지만 OrderDetail이 Order의 pk를 외래키로 관리하고 있는 것을 알 수 있다.    
+
+'어? 그럼 OrderDetail이 Item, Order와의 관계에서 주인이 되는건가요?'     
+
+하지만 한가지 누락된게 있다. Item입장에서 내가 OrderDetail에 속해 있는지 알 필요가 있을까?     
+
+물론 통계와 관련해서 필요할 지 모르지만 내 관점에서 볼 때는 굳이 OrderDetail과 Item과 양방향을 잡을 필요는 없어 보인다.    
+
+단지 OrderDetail만 Item으로 단방향 매핑만으로도 문제 없어보인다. 또한 차후에 양방향이 필요하면 당연히 양방향 매핑을 하면 된다.    
+
+그것은 어디까지나 비지니스에서 요구사항에 따라 유연하게 변경하면 되는 부분이다.     
+
+Item
+
+```
+package io.basquiat.model.item;
+
+import java.time.LocalDateTime;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.PrePersist;
+import javax.persistence.PreUpdate;
+import javax.persistence.Table;
+
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+
+/**
+ * 
+ * created by basquiat
+ *
+ */
+@Entity
+@Table(name = "basquiat_item")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @ToString
 public class Item {
 	
 	@Builder
-	public Item(String name, int stock) {
+	public Item(String id, String name, String model) {
+		this.id = id;
 		this.name = name;
-		this.stock = stock;
+		this.model = model;
 	}
 	
+	/** 상품 코드 */
+	@Id
+	private String id;
+	
+	/** 상품 명 */
+	@Column(name = "it_name")
+	private String name;
+
+	/** 상품 모델명 */
+	@Column(name = "it_model")
+	private String model;
+	
+	/** 상품 생성일 */
+	@Column(name = "created_at")
+	private LocalDateTime createdAt;
+	
+	/** 상품 수정일 */
+	@Column(name = "updated_at")
+	private LocalDateTime updatedAt;
+	
+	/** insert할때 현재 시간으로 인서트한다. */
+    @PrePersist
+    protected void setUpCreatedAt() {
+    	createdAt = LocalDateTime.now();
+    }
+
+    /** update 이벤트가 발생시에 업데이트된 시간으로 update */
+    @PreUpdate
+    protected void onUpdate() {
+    	updatedAt = LocalDateTime.now();
+    }
+    
+}
+```
+기존의 ManyToMany관계를 없애버리자.    
+
+자 그럼 OrderDetail을 만들어보자.    
+
+OrderDetail
+
+```
+package io.basquiat.model.item;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+
+/**
+ * 
+ * created by basquiat
+ *
+ */
+@Entity
+@Table(name = "basquiat_order_detail")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@ToString(exclude = {"item", "order"})
+public class OrderDetail {
+
+	/** 주문 번호 생성 */
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 	
-	private String name;
-
-	private int stock;
+	/** 주문한 상품 */
+	@ManyToOne
+	@JoinColumn(name = "item_id")
+	private Item item;
+	
+	/** 내가 속해 있는 Order정보 */
+	@ManyToOne
+	@JoinColumn(name = "order_id")
+	private Order order;
+	
+	/** 주문한 상품의 수량 */
+	private int quantity;
+	
+	/** 주문한 상품의 전체 가격 */
+	private int price;
+	
+	/** 주문한 상품의 옵션 아이디 */
+	@Column(name = "io_id")
+	private int optionId;
+	
+	/** 주문한 상품의 옵션명 */
+	@Column(name = "io_name")
+	private String optionName;
 	
 }
 
 ```
+자 그럼 이제 Order부분이 변경될 차례다.    
 
-이렇게 엔티티를 만들고 DDL을 생성하게 되면 
+Order
 
 ```
-7월 13, 2020 1:17:22 오전 org.hibernate.jpa.internal.util.LogHelper logPersistenceUnitInformation
-INFO: HHH000204: Processing PersistenceUnitInfo [name: basquiat]
-7월 13, 2020 1:17:22 오전 org.hibernate.Version logVersion
-INFO: HHH000412: Hibernate ORM core version 5.4.17.Final
-7월 13, 2020 1:17:22 오전 org.hibernate.annotations.common.reflection.java.JavaReflectionManager <clinit>
-INFO: HCANN000001: Hibernate Commons Annotations {5.1.0.Final}
-7월 13, 2020 1:17:23 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl configure
-WARN: HHH10001002: Using Hibernate built-in connection pool (not for production use!)
-7월 13, 2020 1:17:23 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl buildCreator
-INFO: HHH10001005: using driver [com.mysql.cj.jdbc.Driver] at URL [jdbc:mysql://localhost:3306/basquiat?rewriteBatchedStatements=true&useUnicode=yes&characterEncoding=UTF-8&serverTimezone=Asia/Seoul]
-7월 13, 2020 1:17:23 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl buildCreator
-INFO: HHH10001001: Connection properties: {user=basquiat, password=****}
-7월 13, 2020 1:17:23 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl buildCreator
-INFO: HHH10001003: Autocommit mode: false
-7월 13, 2020 1:17:23 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl$PooledConnections <init>
-INFO: HHH000115: Hibernate connection pool size: 20 (min=1)
-7월 13, 2020 1:17:24 오전 org.hibernate.dialect.Dialect <init>
-INFO: HHH000400: Using dialect: org.hibernate.dialect.MySQL5InnoDBDialect
-Hibernate: 
-    
-    alter table member_item 
-       drop 
-       foreign key FKo2np23h92vspxdhcxaojylsp3
-7월 13, 2020 1:17:25 오전 org.hibernate.resource.transaction.backend.jdbc.internal.DdlTransactionIsolatorNonJtaImpl getIsolatedConnection
-INFO: HHH10001501: Connection obtained from JdbcConnectionAccess [org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator$ConnectionProviderJdbcConnectionAccess@43b0ade] for (non-JTA) DDL execution was not in auto-commit mode; the Connection 'local transaction' will be committed and the Connection will be set into auto-commit mode.
-Hibernate: 
-    
-    alter table member_item 
-       drop 
-       foreign key FKii0c9jys90jtoqh48pji2w8ip
-Hibernate: 
-    
-    drop table if exists item
-Hibernate: 
-    
-    drop table if exists member
-Hibernate: 
-    
-    drop table if exists member_item
-Hibernate: 
-    
-    create table item (
-       id bigint not null auto_increment,
-        name varchar(255),
-        stock integer not null,
-        primary key (id)
-    ) engine=InnoDB
-7월 13, 2020 1:17:25 오전 org.hibernate.resource.transaction.backend.jdbc.internal.DdlTransactionIsolatorNonJtaImpl getIsolatedConnection
-INFO: HHH10001501: Connection obtained from JdbcConnectionAccess [org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator$ConnectionProviderJdbcConnectionAccess@599f571f] for (non-JTA) DDL execution was not in auto-commit mode; the Connection 'local transaction' will be committed and the Connection will be set into auto-commit mode.
-Hibernate: 
-    
-    create table member (
-       id bigint not null auto_increment,
-        address varchar(255),
-        name varchar(255),
-        primary key (id)
-    ) engine=InnoDB
-Hibernate: 
-    
-    create table member_item (
-       Member_id bigint not null,
-        items_id bigint not null
-    ) engine=InnoDB
-Hibernate: 
-    
-    alter table member_item 
-       add constraint FKo2np23h92vspxdhcxaojylsp3 
-       foreign key (items_id) 
-       references item (id)
-Hibernate: 
-    
-    alter table member_item 
-       add constraint FKii0c9jys90jtoqh48pji2w8ip 
-       foreign key (Member_id) 
-       references member (id)
-7월 13, 2020 1:17:26 오전 org.hibernate.engine.transaction.jta.platform.internal.JtaPlatformInitiator initiateService
-INFO: HHH000490: Using JtaPlatform implementation: [org.hibernate.engine.transaction.jta.platform.internal.NoJtaPlatform]
-7월 13, 2020 1:17:26 오전 org.hibernate.engine.internal.StatisticalLoggingSessionEventListener end
-INFO: Session Metrics {
-    380400 nanoseconds spent acquiring 1 JDBC connections;
-    451900 nanoseconds spent releasing 1 JDBC connections;
-    0 nanoseconds spent preparing 0 JDBC statements;
-    0 nanoseconds spent executing 0 JDBC statements;
-    0 nanoseconds spent executing 0 JDBC batches;
-    0 nanoseconds spent performing 0 L2C puts;
-    0 nanoseconds spent performing 0 L2C hits;
-    0 nanoseconds spent performing 0 L2C misses;
-    0 nanoseconds spent executing 0 flushes (flushing a total of 0 entities and 0 collections);
-    0 nanoseconds spent executing 0 partial-flushes (flushing a total of 0 entities and 0 collections)
+package io.basquiat.model.item;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
+import javax.persistence.OneToOne;
+import javax.persistence.PrePersist;
+import javax.persistence.Table;
+
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+
+/**
+ * 
+ * created by basquiat
+ *
+ */
+@Entity
+@Table(name = "basquiat_order")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@ToString(exclude = {"member", "delivery", "orderDetails"})
+public class Order {
+
+	/** 주문 번호 생성 */
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+	
+	/** 주문 상태 */
+	@Enumerated(EnumType.STRING)
+	private OrderStatus status;
+	
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "member_id")
+	private Member member;
+	
+	@OneToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "delivery_id")
+	private Delivery delivery;
+	
+	/** OrderDetail과 매핑을 한다. 이 때 주인은 나의 pk를 관리하는 대상이 OrderDetail이기 때문에 주인이라는 것을 명시한다. */
+	@OneToMany(mappedBy = "order")
+	private List<OrderDetail> orderDetails = new ArrayList<>();
+	
+	/** 주문 일자 */
+	@Column(name = "order_at")
+	private LocalDateTime orderAt;
+	
+	/** insert할때 현재 시간으로 인서트한다. */
+    @PrePersist
+    protected void setUpSignupAt() {
+    	orderAt = LocalDateTime.now();
+    }
+	
 }
-7월 13, 2020 1:17:26 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl$PoolState stop
-INFO: HHH10001008: Cleaning up connection pool [jdbc:mysql://localhost:3306/basquiat?rewriteBatchedStatements=true&useUnicode=yes&characterEncoding=UTF-8&serverTimezone=Asia/Seoul]
-
 ```
-
-생성 쿼리를 보면 
+제대로 연관관계 매핑이 완료되었다면 그려진 ERD의 형태대로 테이블이 생성된 것을 확인 할 수 있다.    
 
 ```
 Hibernate: 
     
-    create table member_item (
-       Member_id bigint not null,
-        items_id bigint not null
+    alter table basquiat_order 
+       drop 
+       foreign key FK563g01judd0kln0c307jt85x7
+Hibernate: 
+    
+    alter table basquiat_order 
+       drop 
+       foreign key FKf2swmba3h8fiegrxcoek3dgvw
+Hibernate: 
+    
+    alter table basquiat_order_detail 
+       drop 
+       foreign key FKfwm50dk49vqmbgte9nbiigpbf
+Hibernate: 
+    
+    alter table basquiat_order_detail 
+       drop 
+       foreign key FKf5m8vo7i2pyhd4x0ccb288b3f
+Hibernate: 
+    
+    drop table if exists basquiat_delivery
+Hibernate: 
+    
+    drop table if exists basquiat_item
+Hibernate: 
+    
+    drop table if exists basquiat_member
+Hibernate: 
+    
+    drop table if exists basquiat_order
+Hibernate: 
+    
+    drop table if exists basquiat_order_detail
+Hibernate: 
+    
+    create table basquiat_delivery (
+       id bigint not null auto_increment,
+        completed_at datetime,
+        courier varchar(255),
+        delivery_at datetime,
+        place varchar(255),
+        status varchar(255),
+        primary key (id)
     ) engine=InnoDB
 Hibernate: 
     
-    alter table member_item 
-       add constraint FKo2np23h92vspxdhcxaojylsp3 
-       foreign key (items_id) 
-       references item (id)
+    create table basquiat_item (
+       id varchar(255) not null,
+        created_at datetime,
+        it_model varchar(255),
+        it_name varchar(255),
+        updated_at datetime,
+        primary key (id)
+    ) engine=InnoDB
 Hibernate: 
     
-    alter table member_item 
-       add constraint FKii0c9jys90jtoqh48pji2w8ip 
-       foreign key (Member_id) 
-       references member (id)
-
+    create table basquiat_member (
+       id bigint not null auto_increment,
+        mb_address varchar(255),
+        mb_email varchar(255),
+        mb_name varchar(255),
+        mb_phone varchar(255),
+        signup_at datetime,
+        primary key (id)
+    ) engine=InnoDB
+Hibernate: 
+    
+    create table basquiat_order (
+       id bigint not null auto_increment,
+        order_at datetime,
+        status varchar(255),
+        delivery_id bigint,
+        member_id bigint,
+        primary key (id)
+    ) engine=InnoDB
+Hibernate: 
+    
+    create table basquiat_order_detail (
+       id bigint not null auto_increment,
+        io_id integer,
+        io_name varchar(255),
+        price integer not null,
+        quantity integer not null,
+        item_id varchar(255),
+        order_id bigint,
+        primary key (id)
+    ) engine=InnoDB
+Hibernate: 
+    
+    alter table basquiat_order 
+       add constraint FK563g01judd0kln0c307jt85x7 
+       foreign key (delivery_id) 
+       references basquiat_delivery (id)
+Hibernate: 
+    
+    alter table basquiat_order 
+       add constraint FKf2swmba3h8fiegrxcoek3dgvw 
+       foreign key (member_id) 
+       references basquiat_member (id)
+Hibernate: 
+    
+    alter table basquiat_order_detail 
+       add constraint FKfwm50dk49vqmbgte9nbiigpbf 
+       foreign key (item_id) 
+       references basquiat_item (id)
+Hibernate: 
+    
+    alter table basquiat_order_detail 
+       add constraint FKf5m8vo7i2pyhd4x0ccb288b3f 
+       foreign key (order_id) 
+       references basquiat_order (id)
 ```
 
-member_item테이블을 생성하고 각 컬럼을 item과 member를 참조해 fk를 잡는 alter쿼리를 볼 수 있다.    
+참고로 pk-fk가 걸린 테이블은 한번에 지워지지 않는다. 즉 외래키 관련 생성된 정보를 drop하고 난 이후에 지우는 것을 알 수 있다.     
 
-하지만 이 방식을 권유하지 않는 이유는 이 중간 테이블만으로는 무언가를 제대로 할 수 없다는 것이다.     
+이것은 DB와 관련된 지식으로 차후 cascade를 알아 볼 때 좀 더 세세하게 알아 볼 예정이다.    
 
-사용자가 상품을 몇개를 언제 주문했는지에 대한 정보를 담을 수 있어야 한다는 것이다.    
+쿼리가 날아간 흔적을 따라가면 각각의 테이블이 존재하면 지우고 새로 생성하는 쿼리가 먼저 날아간다.    
 
-결국 책에서는 저 중간 테이블을 엔티티로 격상시켜서 1:N, N:1로 매핑하는 것을 권유한다.     
+그리고 연관관계 매핑의 내용을 보고 테이블에 그와 관련된 외래키 설정을 위한 alter table쿼리를 날리는 것을 확인 할 수 있다.    
 
-다음에는 양방향 매핑을 알아보겠다.
+basquiat_order table
+
+```
+Hibernate: 
+    
+    alter table basquiat_order 
+       add constraint FK563g01judd0kln0c307jt85x7 
+       foreign key (delivery_id) 
+       references basquiat_delivery (id)
+Hibernate: 
+    
+    alter table basquiat_order 
+       add constraint FKf2swmba3h8fiegrxcoek3dgvw 
+       foreign key (member_id) 
+       references basquiat_member (id)
+```
+우리가 erd기준으로 연관관계 매핑을 한 대로 delivery_id, member_id를 생성하는 것을 알 수 있다.     
+
+sql에 대해 익숙하지 않는 분들을 위해서 입으로 한번 털어보겠다.     
+
+1. 이제부터 내가 외래키를 잡을 예정입니다.     
+
+2. 그 외래키의 이름은 FK563g01judd0kln0c307jt85x7이고 외래키로 delivery_id를 생성할 겁니다.     
+
+3. 참조되는 테이블은 basquiat_delivery테이블이면 거기의 pk인 id가 되겠습니다.    
+
+이런 식으로 alter를 날리는 것이다.    
+
+basquiat_order_detail에 대해서도 마찬가지이다.     
+
+
+# At A Glance    
+
+JPA와 관련되서 많은 사람들을 만나보면 가끔 장인을 만나게 된다.     
+
+SQL에 대해선 잘 모르지만 JPA만 깊게 파서 이 모든 것을 아우르는 분을 가끔 보게 된다.      
+
+또는 SQL에 대한 깊은 조예가 있어서 이런 ORM매핑에 대해서 남다른 큰 그림을 빠르게 그리는 분도 있다.     
+
+나의 경우에는 전자도 후자도 아니다. 그래서 꾸준히 회사의 ERD를 보고 나름대로 잘못된 부분은 수정해 보기도 하고 이것을 JPA로 어떻게 풀어갈 지 항상 고민한다.     
+
+언젠가는 나도 장인이 되지 않을까?     
+
+지금까지 단방향, 양방향에 대해서 조금 알아 보았다.     
+
+실제로 회사의 erd를 기준으로 만든 것이라 나에게는 나름대로 jpa를 다시 공부하고 적용하는데 도움이 된다.     
+
+지금 이 깃헙을 보는 분들도 그렇게 해보길 권한다.    
+
+왜냐하면 실제로 토이 프로젝트, 자신이 생각한 프로젝트에 대해서는 누구나 쉽게 한다. 일단 간단하게 시작하기 때문이다.     
+
+굉장히 복잡한 erd는 대부분 회사의 디비를 보면 느낄 수 있다. 일단 이커머스라서 그런지 정말 복잡하다. 테이블도 많고....      
+
+하지만 대부분은 이미 기획단계에서 분석되고 만들어진 ERD를 기분으로 ORM을 해야 하는 경우가 많다.    
+
+결국 연습이 필요하다. 이런 연습은 어플리케이션을 만들고 할 것도 없이 이런 방식으로 다양한 erd를 정말 한 번보고 딱 떠올라서 매핑할 수 있을 정도로 연습하면 고수가 되지 않을까?     
+

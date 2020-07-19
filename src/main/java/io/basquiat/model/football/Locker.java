@@ -1,9 +1,10 @@
-package io.basquiat.model;
+package io.basquiat.model.football;
 
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.OneToOne;
 import javax.persistence.Table;
 
 import lombok.AccessLevel;
@@ -17,28 +18,34 @@ import lombok.ToString;
  * created by basquiat
  *
  */
-@Entity
-@Table(name = "club")
+//@Entity
+@Table(name = "locker")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@ToString
-public class Club {
+@ToString(exclude = "player")
+public class Locker {
 
 	@Builder
-	public Club(String name, int ranking) {
+	public Locker(String name, String position) {
 		this.name = name;
-		this.ranking = ranking;
+		this.position = position;
 	}
-
-	/** 클럽 아이디 */
+	
+	/** 락커 아이디 */
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 	
-	/** 클럽 명 */
+	/** 락커 이름 */
 	private String name;
+
+	/** 락커가 있는 위치 정보 */
+	private String position;
 	
-	/** 클럽 랭킹 순위 */
-	private int ranking;
+	@OneToOne(mappedBy = "locker")
+	private Player player;
 	
+	public void matchingPlayer(Player player) {
+		this.player = player;
+	}
 }
