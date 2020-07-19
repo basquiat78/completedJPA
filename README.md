@@ -2227,7 +2227,7 @@ basquiat_delivery, basquiat_item, basquiat_member, basquiat_order, order_item
 
 그 이후에 alter를 통해 외래키 설정을 하는 쿼리가 날아간 것을 볼 수 있다. ManyToMany에서 생성된 이 생뚱 맞은 테이블에도 item_id, order_id를 외래키로 잡는 모습도 포착되었다.     
 
-하지만 우리는 책에서 그리고 수많은 블로그의 이야기들을 보면 이것은 절대로 ~Naver Die~~ 쓰지말라고 권장한다.     
+하지만 우리는 책에서 그리고 수많은 블로그의 이야기들을 보면 이것은 절대로 ~~Naver Die~~ 쓰지말라고 권장한다.     
 
 자 그러면 우리는 이것을 그전에 중간에 저렇게 생성되는 테이블을 엔티티로 격상시켜서 이것을 발라버릴 것이다.    
 
