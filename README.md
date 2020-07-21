@@ -69,5 +69,5 @@ JPA를 처음 접하시는 분들에게는 그래도 어느정도 도움이 되�
 
 [양방향 매핑](https://github.com/basquiat78/completedJPA/tree/7.bidirectional-relation-mapping)    
 
-
+[상속 매핑 및 단순 상속](https://github.com/basquiat78/completedJPA/tree/8.inheritance-mapping)    
 
