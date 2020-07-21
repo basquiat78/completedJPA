@@ -1,7 +1,6 @@
 package io.basquiat.model.item;
 
 import javax.persistence.Column;
-import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
@@ -20,7 +19,7 @@ import lombok.ToString;
  * created by basquiat
  *
  */
-@Entity
+//@Entity
 @Table(name = "basquiat_order_detail")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

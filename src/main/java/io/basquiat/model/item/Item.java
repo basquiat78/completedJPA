@@ -3,7 +3,6 @@ package io.basquiat.model.item;
 import java.time.LocalDateTime;
 
 import javax.persistence.Column;
-import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
@@ -20,7 +19,7 @@ import lombok.ToString;
  * created by basquiat
  *
  */
-@Entity
+//@Entity
 @Table(name = "basquiat_item")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
