@@ -15,7 +15,7 @@ import lombok.ToString;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @ToString
 @MappedSuperclass
-public class Common {
+public abstract class Common {
 
 	public Common(String customer, LocalDateTime orderAt, String luthiers, LocalDateTime completedAt,
 			LocalDateTime deliveryAt) {
