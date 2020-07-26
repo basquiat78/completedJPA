@@ -3,6 +3,9 @@ package io.basquiat.model.football;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.persistence.CascadeType;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
@@ -20,7 +23,7 @@ import lombok.ToString;
  * created by basquiat
  *
  */
-//@Entity
+@Entity
 @Table(name = "club")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -44,7 +47,12 @@ public class Club {
 	/** 클럽 랭킹 순위 */
 	private int ranking;
 	
-	@OneToMany(mappedBy = "footballClub")
+	@OneToMany(mappedBy = "footballClub", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
 	private List<Player> players = new ArrayList<>();
 	
+	/** 선수를 영입하다 */
+	public void scoutPlayer(Player player) {
+		player.entryClub(this);
+		this.getPlayers().add(player);
+	}
 }

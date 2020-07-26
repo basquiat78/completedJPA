@@ -17,7 +17,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
-@Entity
+//@Entity
 @Table(name = "bass_guitar")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter

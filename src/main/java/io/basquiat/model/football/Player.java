@@ -1,5 +1,7 @@
 package io.basquiat.model.football;
 
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
@@ -12,6 +14,7 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import lombok.ToString;
 
 /**
@@ -19,7 +22,7 @@ import lombok.ToString;
  * created by basquiat
  *
  */
-//@Entity
+@Entity
 @Table(name = "player")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -32,7 +35,6 @@ public class Player {
 		this.age = age;
 		this.position = position;
 		this.footballClub = footballClub;
-		footballClub.getPlayers().add(this);
 		this.locker = locker;
 		locker.matchingPlayer(this);
 	}
@@ -46,17 +48,22 @@ public class Player {
 	private String name;
 	
 	/** 선수 나이 */
+	@Setter
 	private int age;
 
 	/** 선수 포지션 */
 	private String position;
 	
-	@ManyToOne
+	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "club_id")
 	private Club footballClub;
 	
-	@OneToOne
+	@OneToOne(fetch = FetchType.LAZY, orphanRemoval = true)
 	@JoinColumn(name = "locker_id")
 	private Locker locker;
-	
+
+	/** 클럽에 소속되다 */
+	public void entryClub(Club club) {
+		this.footballClub = club;
+	}
 }

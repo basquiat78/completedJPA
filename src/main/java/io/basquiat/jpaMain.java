@@ -5,8 +5,9 @@ import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
 import javax.persistence.Persistence;
 
-import io.basquiat.model.mapsuperclazz.BassGuitar;
-import io.basquiat.model.mapsuperclazz.Necklace;
+import io.basquiat.model.football.Club;
+import io.basquiat.model.football.Locker;
+import io.basquiat.model.football.Player;
 
 /**
  * 
@@ -22,35 +23,45 @@ public class jpaMain {
         tx.begin();
         try {
         	
-        	Necklace necklace = Necklace.builder().material("14K Gold")
-        										  .lineMaterial("14K Gold")
-        										  .color("Gold")
-        										  .shape("Stardust")
-        										  .customer("아리")
-        										  .luthiers("STONEHENGE")
-        										  .build();
+        	Locker sonsLocker = Locker.builder().name("손흥민의 락커")
+												.position("입구에서 4번째 위치")
+												.build();
+
+        	Player son = Player.builder().name("손흥민")
+										 .age(27)
+										 .position("Striker")
+										 .locker(sonsLocker)
+										 .build();
         	
-        	em.persist(necklace);
+        	Locker hugoLocker = Locker.builder().name("위고 요리스의 락커")
+												.position("입구에서 1번째 위치")
+												.build();
+					        	
+			Player hugo = Player.builder().name("Hugo Hadrien Dominique Lloris")
+										 .age(33)
+										 .position("Goal Keeper")
+										 .locker(hugoLocker)
+										 .build();
+			
+			Club tottenhamFootballClub = Club.builder().name("Tottenham Hotspur Football Club")
+													   .ranking(9)
+													   .build();
+        	tottenhamFootballClub.scoutPlayer(hugo);
+        	tottenhamFootballClub.scoutPlayer(son);
+        	em.persist(hugo);
+        	em.persist(son);
+        	em.persist(hugoLocker);
+        	em.persist(sonsLocker);
+			em.persist(tottenhamFootballClub);
         	em.flush();
         	em.clear();
         	
-        	Necklace completedNecklace = em.find(Necklace.class, 1L);
-        	System.out.println(completedNecklace.toString());
-        	completedNecklace.completedAt();
-        	em.flush();
-        	em.clear();
-        	
-        	Necklace deliveryNecklace = em.find(Necklace.class, 1L);
-        	System.out.println(deliveryNecklace.toString());
-        	deliveryNecklace.deliveryAt();
-        	em.flush();
-        	em.clear();
-        	
-        	Necklace selected = em.find(Necklace.class, 1L);
-        	System.out.println(selected.toString());
-        	
+        	Club selected = em.find(Club.class, 1L);
+        	System.out.println("이적했으니 클럽 선수 명단에서 지운다.");
+        	selected.getPlayers().remove(0); // 리스트에서 첫 번째 인덱스를 지운다.
         	tx.commit();
         } catch(Exception e) {
+        	e.printStackTrace();
             tx.rollback();
         } finally {
             em.close();

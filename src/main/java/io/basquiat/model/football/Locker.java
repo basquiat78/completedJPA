@@ -1,5 +1,7 @@
 package io.basquiat.model.football;
 
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
@@ -17,7 +19,7 @@ import lombok.ToString;
  * created by basquiat
  *
  */
-//@Entity
+@Entity
 @Table(name = "locker")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -41,7 +43,7 @@ public class Locker {
 	/** 락커가 있는 위치 정보 */
 	private String position;
 	
-	@OneToOne(mappedBy = "locker")
+	@OneToOne(mappedBy = "locker", fetch = FetchType.LAZY)
 	private Player player;
 	
 	public void matchingPlayer(Player player) {

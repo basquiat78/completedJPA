@@ -1,1565 +1,487 @@
-# 상속 매핑하기     
+# Proxy
 
 ## 일단 시작하기 전에     
+지금까지 우리가 연관관계 매핑을 하면서 특별히 fetch전략에 대해서 고민해 본적이 없다.    
 
-이전에 만들었던 모든 객체에 붙어 있는 @Entity를 주석처리하고 시작한다.     
+단지 객체 그래프 탐색이라는 것에만 초점을 맞추고 진행해 왔는데 JPA를 처음 접하게 되면 이 경우 fetch전략에 대해서 많은 이야기를 듣게 된다.     
 
-사실 이 매핑에 대해서 책을 보면서 이걸 언제 쓰는건가라는 생각을 해왔다.     
+실제 쿼리에서는 이런 전략이라는게 없다.     
 
-왜냐하면 보통은 단일 테이블에 속성들을 담는 형식이 대부분이였기 때문이다.     
+그냥 다 가져오거나 또는 외래키를 가지고 관계를 가지고 있는 대상 테이블에서 조회를 다시 해오거나 둘 중 하나이다.     
 
-물론 DB에서는 상속관계라는게 존재하기는 한건가라는 생각도 있다.    
+하지만 JPA에서는 이것을 좀 다른 방식으로 풀어가고 있는데 그것을 이해하기 위해서 Proxy에 대한 개념을 설명하고 있다.     
 
-만일 지금 내가 이커머스쪽을 경험하지 않았다면 이 부분은 그냥 대충 떼우고 넘어갔을지도 모른다.    
+프록시에 대해서 찾으면 대부분 다음과 같은 이야기를 주제로 한다.
 
-소개하는 이유는 몇 가지 이유가 있다.    
+[Proxy](https://dany-it.tistory.com/107)
 
-일단 회사 입사할 때 상품에 대한 테이블은 다음과 같은 구조였다.     
+하지만 JPA에서는 Proxy란 무엇일까?      
 
-![실행이미지](https://github.com/basquiat78/completedJPA/blob/8.inheritance-mapping/capture/capture1.png)    
-
-한 테이블에 모든 정보를 그냥 다 때려박았다. 컬럼이 대충 40개가 넘었던거 같은데??      
-
-현재는 이 테이블을 다음과 같이 나눴다.     
-
-![실행이미지](https://github.com/basquiat78/completedJPA/blob/8.inheritance-mapping/capture/capture2.png)     
-
-사실 조인되는 테이블이 더 많긴 하다. 간략하게 어떻게 나눴는지에 대한 부분을 표현한 것 뿐이다.     
-
-하지만 이것은 단지 정규화시킨 구조로 단순 OneToOne의 관계를 맺을 뿐 상속관계와는 다르다.     
-
-말 그대로 공통 관심사를 분리시킨 구조에 지나지 않는다.    
-
-하지만 이것을 써야 할 필요가 있는가에 대해서는 바로 11번가와 연동을 하는 과정에 발생한 테이블 구조의 차이를 알게 되면서이다.     
-
-옷, 악세사리등을 파는 쇼핌몰에서 다른 카테고리의 상관과는 별반 상관이 없었지만 11번가의 그 수많은 카테고리와 상품의 구조는 지금 설명하기 딱 좋기도 하고 실제 책에서도 이와 비슷한 이야기를 하기 때문이다.     
-
-또한 내가 자주 가는 악기 쇼핑몰의 경우에도 적용될 수 있다.    
-
-자 그럼 나는 내가 자주 가는 악기 쇼핑몰을 예로 들 것이다.     
-
-악기 쇼핑몰에서는 단순하게 악기만 팔지는 않는다. 악기를 다루기 위한 교재도 팔기도 하고 관련 음반도 팔기도 하며 악기에 달리는 스트링도 팔고 픽업, 프리앰프, 앰프, 스탠드도 팔고 암튼 악기와 관련된 모든 상품들을 판다.    
-
-악기의 경우에는 현수, 또는 악기를 만들 때 사용한 나무의 종류들이 기재될 것이고 교재의 경우에는 저자 (공동 저자도 있을 수 있고)가 있고 음반은 아티스트 명, 메인 악기 (베이스인지 기타인지), 발매 년도, 장르, 레이블의 정보를 가질 수 있다.    
-
-스탠드도 기타용인지 키보드용인지 구분을 지어야 하는 구분값, 재질 정보도 포함해야한다. 스트링은? 스댕인지 니켈인지 코팅줄인지도 표기해야하고 4,5,6현 낱줄 판매인지 어디 회사인지도 기재해야 한다.    
-
-그럼 하나의 테이블에 이 모든 정보를 다 때려박아야 하는건가? 라는 생각이 퍼득 들었다.    
-
-그러면  테이블 구조을 과연 어떻게 가져가야 할까라는 고민이 확 든다.     
-
-왜냐하면 쇼핑몰입장에서는 어째든 이 모든 것은 그냥 '상품'일 뿐이기 때문이다.     
-
-이런 방식이라면 아마도 테이블 구조를 어떻게 가져가야 하는지 고민을 해봐야 하는 것이다.        
-
-## 단일 테이블 전략          
-
-그냥 하나의 테이블에 모든 것을 때려 박는다이다. 하지만 이 경우에는 단점이 뭐냐면 모든 상품을 검색하는 쿼리가 있다면 자신과 관계없는 컬럼의 정보도 가져와야 한다.     
-
-상품 정보를 인서트할 때 대상 상품 정보에 해당하는 정보는 다 null로 들어가야 하기 때문인데  null이겠지만 어째든 가져오고 봐야 한다.    
-
-또한 상품의 타입이 추가가 된다면 어떻게 될까?    
-
-컬럼이 옆으로 늘어나는 것이 좀 걸리긴 하지만 뭐 어쩔 수 없다. ~~여기 회사에서는 컬럼이 처음 40개가 넘었다니깐???~~         
-
-다만 장점은 성능에 장점이 있을 것이다.     
-
-데이터를 밀어 넣을 때나 조회할 때 또는 업데이트 할때 조인이 걸린 테이블이 없으니 한 테이블에 대고 실행하니 이 부분에서는 속도에 대한 장점이 고려될 것이다.    
-
-일단 이것을 erd로 한번 그려보자.     
-
-간략하게 product라는 테이블이 존재하고 그 테이블에는 악기의 정보, 교재 정보, 스트링 정보만 간략하게 한번 만들어 보기로 한다.    
-
-![실행이미지](https://github.com/basquiat78/completedJPA/blob/8.inheritance-mapping/capture/capture3.png)     
-
-지금이야 테스트이기 때문에 그나마 컬럼이 pk포함 14개뿐이 안되지만 만일 이 악기사 쇼핑몰의 product type이 늘어난다고 생각해 보자.     
-
-아마 컬럼이 그때마다 길어질 것은 자명한 일이다.      
-
-자 일단 엔티티 설계를 하기 전에 어떤 것이 있는지 먼저 알아보자.     
-
-### @Inheritance     
-
-상속 매핑 전략을 선택하겠다는 어노테이션이며 이 어노테이션에는 그 중 어떤 방식으로 가져갈 것인지에 대한 정보를 명시할 수 있다.     
-
-기본으로 저렇게만 걸면 단일 테이블 전략을 선택한다.     
-
-이것은 뒤에 예제를 통해서 하나씩 알아보자.     
-
-### @DiscriminatorColumn     
-
-위에 erd를 살펴보면 product_type이라는 컬럼이 있는 것을 볼 수 있다.    
-
-어떤 정보도 명시하지 않으면 기본으로 DTYPE이라는 컬럼을 만들게 된다.     
-
-이것도 뒤에 예제를 통해서 하나씩 알아보자.    
-
-### @DiscriminatorValue     
-
-위에 erd를 다시 살펴보자. product_type은 우리가 데이터를 인서트시에 지정해서 넣어줄 수 있지만 이것을 통해서 해당 엔티티의 경우에는 이 어노테이션에 명시해서 그 값을 자동으로 세팅하게 해줄 수 있다.    
-
-이것도 뒤에 예제를 통해서 하나씩 알아보자.     
-
-* 작업하기에 앞서서...한 시간을 삽질했는데 왠간하면 예약어는 안쓰는게 좋겠다. 
+예들 들면 지금까지 테스트해왔던 Player를 예로 들면 Player는 Locker, Club로 다시 한번 테스트 해보자.     
 
 ```
-inheritance Could not determine type for:, at table: product, for columns: [org.hibernate.mapping.Column(maker)]
+Player son = em.find(Player.class, 1L);
+System.out.println(son.toString());
 ```
-보통 악기의 줄을 String이라고 하기때문에 엔티티 객체 면을 String으로 했다가 마주한 에러앞에서 무릎을 꿇고 말았다. 혹시나 해서 클래스명을 바꾸니 잘 되어버린.....
 
-자 그럼 첫 번째 우리는 단일 테이블 전략을 구성해 보기로 했으니 하나씩 만들어 보자.     
-
-Product
+다음과 같이 손흥민에 대한 정보를 조회하게 되면 쿼리가 어떻게 날아갈까?
 
 ```
-package io.basquiat.model.product;
-
-import javax.persistence.DiscriminatorColumn;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.Inheritance;
-import javax.persistence.Table;
-
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-
-@Entity
-@Table(name = "product")
-@Inheritance
-@DiscriminatorColumn(name = "product_type")  
-@Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-public abstract class Product {
-	
-	public Product(String name, String maker) {
-		this.name = name;
-		this.maker = maker;
-	}
-
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
-	
-	/** 생산품 명 */
-	private String name;
-	
-	/** 제조사 */
-	private String maker;
-
-}
+Hibernate: 
+    select
+        player0_.id as id1_2_0_,
+        player0_.age as age2_2_0_,
+        player0_.club_id as club_id5_2_0_,
+        player0_.locker_id as locker_i6_2_0_,
+        player0_.name as name3_2_0_,
+        player0_.position as position4_2_0_,
+        club1_.id as id1_0_1_,
+        club1_.name as name2_0_1_,
+        club1_.ranking as ranking3_0_1_,
+        locker2_.id as id1_1_2_,
+        locker2_.name as name2_1_2_,
+        locker2_.position as position3_1_2_ 
+    from
+        player player0_ 
+    left outer join
+        club club1_ 
+            on player0_.club_id=club1_.id 
+    left outer join
+        locker locker2_ 
+            on player0_.locker_id=locker2_.id 
+    where
+        player0_.id=?
+Player(id=1, name=손흥민, age=27, position=Striker)
 ```
-erd기준으로 Product에 대한 공통 관심사를 Product클래스에 담아냈다. 이녀석이 부모가 되기 때문에 @Inheritance를 붙였다. 기본값이 단일 테이블이니 생략하고 상품을 구분짓은 컬럼은 "product_type으로 지정했다.    
+다음과 같이 club과 locker를 조인해서 가져오게 된다.     
 
-그리고 Product의 클래스 앞에 abstract가 붙은 것을 확인하자.     
+하지만 만일 어떤 로직에서 locker와 club에 대한 정보는 굳이 필요하지 않다고 한다면 이 쿼리가 정말 유의미한 쿼리일까? ~~나는 그냥 손흥민 정보만 알고 싶었는데....~~     
 
-이유가 무엇일까? 보통 추상 클래스는 부모 클래스를 extends하는 자식 클래스에 의해서 완성되어 진다.    
+거기에 쿼리가 날아간 것은 LEFT OUTER JOIN으로 정보를 가져온다.      
 
-만일 Product가 추상 클래스가 아니라면 Product클래스 내부에 선언된 name, maker만으로도 사용할 수 있게 된다.     
+예전 myBatis로 프로젝트 했을 때는 이것을 어떻게 처리하냐면 보통은 손흥민의 정보만 가져오는 쿼리, 그리고 다른 테이블과 조인을 해서 정보를 가져오는 쿼리를 만들었다.     
 
-물론 Product가 추상클래스가 아니라도 구성하는데는 문제가 없지만 자칫하면 Product자체만을 사용할 수 있는 소지가 생길 수 있기에 이 경우에는 추상 클래스로 선언하자. ~~자바 기초인가요?~~     
-
-Book
+예를 들면
 
 ```
-package io.basquiat.model.product;
+@Mapper
+public interface PlayerMapper {
 
-import javax.persistence.Column;
-import javax.persistence.DiscriminatorValue;
-import javax.persistence.Entity;
-
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
-
-@Entity
-@DiscriminatorValue("BOOK")
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Getter
-@ToString(callSuper = true)
-public class Book extends Product {
-	
-	@Builder
-	public Book(String name, String maker, String author, String type) {
-		super(name, maker);
-		this.author = author;
-		this.type = type;
-	}
-
-	/** 교재 저자 */
-	@Column(name = "book_author")
-	private String author;
-	
-	/** 교재 악기 타입 */
-	@Column(name = "book_type")
-	private String type;
-
-}
-```
-역시 erd에서 교재와 관련된 공통 관심사를 분리했다. 단일 테이블 전략이기 때문에 @Table은 붙이지 않는다. 또한 구분값은 "BOOK"으로 지정했다.     
-
-이 부분은 Enum으로 코드를 관리해도 괜찮을 것이다.    
-
-Instrumental     
-
-```
-package io.basquiat.model.product;
-
-import javax.persistence.Column;
-import javax.persistence.DiscriminatorValue;
-import javax.persistence.Entity;
-
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
-
-@Entity
-@DiscriminatorValue("INSTRUMENTAL")
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Getter
-@ToString(callSuper = true)
-public class Instrumental extends Product {
-
-	@Builder
-	public Instrumental(String name, String maker, int stringCnt, String type, String bodyWood, String neckWood,
-			String fingerboardWood) {
-		super(name, maker);
-		this.stringCnt = stringCnt;
-		this.type = type;
-		this.bodyWood = bodyWood;
-		this.neckWood = neckWood;
-		this.fingerboardWood = fingerboardWood;
-	}
-	
-	/** 악기의 현수 */
-	@Column(name = "ins_string_cnt")
-	private int stringCnt;
-
-	/** 
-	 * 악기 타입 
-	 * 지금까지 배운 것을 토대로 이 부분은 Enum으로 체크 할 수 있다.
-	 * 테스트에서는 그냥 스트링 타입으로 한다.
-	 * 
+	/**
+	 * 선수의 정보만 가져온다.
+	 * @param playerId
 	 */
-	@Column(name = "ins_type")
-	private String type;
+	public Player fetchPlayerOnlyById(Long id);
 	
-	/** 바디 나무 재질 */
-	@Column(name = "ins_body_wood")
-	private String bodyWood;
-	
-	/** 넥 나무 재질 */
-	@Column(name = "int_neck_wood")
-	private String neckWood;
-	
-	/** 핑거보드 나무 재질 */
-	@Column(name = "ins_finger_wood")
-	private String fingerboardWood;
-	
-}
-```
-
-InstrumentalString
-
-```
-package io.basquiat.model.product;
-
-import javax.persistence.Column;
-import javax.persistence.DiscriminatorValue;
-import javax.persistence.Entity;
-
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
-
-@Entity
-@DiscriminatorValue("STRING")
-@Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@ToString(callSuper = true)
-public class InstrumentalString extends Product {
-
-	@Builder
-	public InstrumentalString(String name, String maker, String material, String isCoating, int count) {
-		super(name, maker);
-		this.material = material;
-		this.isCoating = isCoating;
-		this.count = count;
-	}
-
-	/** 교재 저자 */
-	@Column(name = "string_material")
-	private String material;
-	
-	/** 교재 저자 */
-	@Column(name = "is_coating")
-	private String isCoating;
-	
-	/** 교재 저자 */
-	@Column(name = "string_cnt")
-	private int count;
-}
-```
-역시 관심사를 분류해서 각각의 엔티티를 만들었다.     
-
-DDL을 한번 생성해 보면 다음과 같이 로그를 볼 수 있다.      
-
-```
-Hibernate: 
-    
-    drop table if exists product
-Hibernate: 
-    
-    create table product (
-       product_type varchar(31) not null,
-        id bigint not null auto_increment,
-        maker varchar(255),
-        name varchar(255),
-        string_cnt integer,
-        is_coating varchar(255),
-        string_material varchar(255),
-        ins_body_wood varchar(255),
-        ins_finger_wood varchar(255),
-        int_neck_wood varchar(255),
-        ins_string_cnt integer,
-        ins_type varchar(255),
-        book_author varchar(255),
-        book_type varchar(255),
-        primary key (id)
-    ) engine=InnoDB
-```
-자...상속한 엔티티들의 정보를 보고 product라는 테이블에 모든 정보를 담은 테이블이 생성된 것을 알 수 있다. 또한 우리가 설정한 product_type컬럼도 잘 생성되었다.    
-
-실제로 인서트하는 코드를 한번 짜보자.     
-
-아...만들고 보니 가격이 누락되었는데 그냥 가보자.      
-
-```
-Instrumental foderaBassGuitar = Instrumental.builder().name("Fodera Emperor 5")
-        														  .maker("Fodera Guitar")
-        														  .type("BASS")
-        														  .bodyWood("Alder")
-        														  .neckWood("Maple")
-        														  .fingerboardWood("Ebony")
-    														  	  .stringCnt(5)
-    														  	  .build();
-em.persist(foderaBassGuitar);
-
-Book rockSchoolVolOne = Book.builder().name("Rock School Grade 5")
-									  .maker("Hal Leonard")
-									  .author("Stuart Clayton")
-									  .type("BOOKFORBASS")
-									  .build();
-em.persist(rockSchoolVolOne);
-
-InstrumentalString dadarioString = InstrumentalString.builder().name("Dadario XL String")
-															   .maker("Dadario")
-															   .material("Nickel")
-															   .count(5)
-															   .build();
-em.persist(dadarioString);
-em.flush();
-em.clear();
-
-Product product1 = em.find(Product.class, foderaBassGuitar.getId());
-System.out.println(product1);
-
-Product product2 = em.find(Product.class, rockSchoolVolOne.getId());
-System.out.println(product2);
-
-Product product3 = em.find(Product.class, dadarioString.getId());
-System.out.println(product3);
-
-```
-
-결과도 한번 확인해 보자.     
-
-```
-Hibernate: 
-    /* insert io.basquiat.model.product.Instrumental
-        */ insert 
-        into
-            product
-            (maker, name, ins_body_wood, ins_finger_wood, int_neck_wood, ins_string_cnt, ins_type, product_type) 
-        values
-            (?, ?, ?, ?, ?, ?, ?, 'INSTRUMENTAL')
-Hibernate: 
-    /* insert io.basquiat.model.product.Book
-        */ insert 
-        into
-            product
-            (maker, name, book_author, book_type, product_type) 
-        values
-            (?, ?, ?, ?, 'BOOK')
-Hibernate: 
-    /* insert io.basquiat.model.product.InstrumentalString
-        */ insert 
-        into
-            product
-            (maker, name, string_cnt, is_coating, string_material, product_type) 
-        values
-            (?, ?, ?, ?, ?, 'STRING')
-Hibernate: 
-    select
-        product0_.id as id2_0_0_,
-        product0_.maker as maker3_0_0_,
-        product0_.name as name4_0_0_,
-        product0_.string_cnt as string_c5_0_0_,
-        product0_.is_coating as is_coati6_0_0_,
-        product0_.string_material as string_m7_0_0_,
-        product0_.ins_body_wood as ins_body8_0_0_,
-        product0_.ins_finger_wood as ins_fin9_0_0_,
-        product0_.int_neck_wood as int_nec10_0_0_,
-        product0_.ins_string_cnt as ins_str11_0_0_,
-        product0_.ins_type as ins_typ12_0_0_,
-        product0_.book_author as book_au13_0_0_,
-        product0_.book_type as book_ty14_0_0_,
-        product0_.product_type as product_1_0_0_ 
-    from
-        Product product0_ 
-    where
-        product0_.id=?            
-Instrumental(super=Product(id=1, name=Fodera Emperor 5, maker=Fodera Guitar), stringCnt=5, type=BASS, bodyWood=Alder, neckWood=Maple, fingerboardWood=Ebony)
-    select
-        product0_.id as id2_0_0_,
-        product0_.maker as maker3_0_0_,
-        product0_.name as name4_0_0_,
-        product0_.string_cnt as string_c5_0_0_,
-        product0_.is_coating as is_coati6_0_0_,
-        product0_.string_material as string_m7_0_0_,
-        product0_.ins_body_wood as ins_body8_0_0_,
-        product0_.ins_finger_wood as ins_fin9_0_0_,
-        product0_.int_neck_wood as int_nec10_0_0_,
-        product0_.ins_string_cnt as ins_str11_0_0_,
-        product0_.ins_type as ins_typ12_0_0_,
-        product0_.book_author as book_au13_0_0_,
-        product0_.book_type as book_ty14_0_0_,
-        product0_.product_type as product_1_0_0_ 
-    from
-        Product product0_ 
-    where
-        product0_.id=?  
-Book(super=Product(id=2, name=Rock School Grade 5, maker=Hal Leonard), author=Stuart Clayton, type=BOOKFORBASS)
-    select
-        product0_.id as id2_0_0_,
-        product0_.maker as maker3_0_0_,
-        product0_.name as name4_0_0_,
-        product0_.string_cnt as string_c5_0_0_,
-        product0_.is_coating as is_coati6_0_0_,
-        product0_.string_material as string_m7_0_0_,
-        product0_.ins_body_wood as ins_body8_0_0_,
-        product0_.ins_finger_wood as ins_fin9_0_0_,
-        product0_.int_neck_wood as int_nec10_0_0_,
-        product0_.ins_string_cnt as ins_str11_0_0_,
-        product0_.ins_type as ins_typ12_0_0_,
-        product0_.book_author as book_au13_0_0_,
-        product0_.book_type as book_ty14_0_0_,
-        product0_.product_type as product_1_0_0_ 
-    from
-        Product product0_ 
-    where
-        product0_.id=?  
-InstrumentalString(super=Product(id=3, name=Dadario XL String, maker=Dadario), material=Nickel, isCoating=null, count=5)
-```
-사실 InstrumentalString의 경우에는 해당 스트링이 기타용인지 베이스용인지 구분이 필요한데 누락되었다.    
-
-그리고 Book의 경우에도 isbn같은 고유 정보도 있는데 이 부분도 누락되었다.     
-
-뭐 테스트니깐 그냥 애교로 넘어가자.       
-
-보면 셀렉트 쿼리도 그냥 pk하나로 가져온다.    
-
-이렇게 단일 테이블 전략을 한번 알아봤다.     
-
-## 조인 전략     
-
-조인 테이블의 경우에는 맨 위에서 언급했던 erd를 참조해 볼 수 있다.     
-
-마치 엔티티의 상속 관계처럼 테이블도 그와 비슷하게 만들어서 그 구조를 가져가는 방식이다.     
-
-그럼 erd로 한번 그려보자.     
-
-![실행이미지](https://github.com/basquiat78/completedJPA/blob/8.inheritance-mapping/capture/capture4.png)     
-
-기존에 설정된 엔티티에서 그다지 바뀔 것은 없다.     
-
-```
-package io.basquiat.model.product;
-
-import javax.persistence.DiscriminatorColumn;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.Inheritance;
-import javax.persistence.InheritanceType;
-import javax.persistence.Table;
-
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
-
-@Entity
-@Table(name = "product")
-@Inheritance(strategy = InheritanceType.JOINED)
-@DiscriminatorColumn(name = "product_type")  
-@Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@ToString
-public abstract class Product {
-	
-	public Product(String name, int price, String maker) {
-		this.name = name;
-		this.price = price;
-		this.maker = maker;
-	}
-
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
-	
-	/** 생산품 명 */
-	private String name;
-	
-	/** 상품 가격 */
-	private int price;
-	
-	/** 제조사 */
-	private String maker;
-
-}
-```
-다음과 같이 전략을 JOINED로 설정만 바꿨을 뿐이다.    
-
-또한 각 엔티티마다 @Table을 통해서 이름을 따로 지정한 정도? ~~일단 price와 book에서 누락된 isbn도 추가했어~~    
-
-자 그리고 기존의 코드를 그냥 한번 실행해보자.     
-
-
-```
-Instrumental foderaBassGuitar = Instrumental.builder().name("Fodera Emperor 5")
-        														  .price(15000000)
-        														  .maker("Fodera Guitar")
-        														  .type("BASS")
-        														  .bodyWood("Alder")
-        														  .neckWood("Maple")
-        														  .fingerboardWood("Ebony")
-    														  	  .stringCnt(5)
-    														  	  .build();
-em.persist(foderaBassGuitar);
-
-Book rockSchoolVolOne = Book.builder().name("Rock School Grade 5")
-									  .price(35000)
-									  .maker("Hal Leonard")
-									  .author("Stuart Clayton")
-									  .type("BOOKFORBASS")
-									  .isbn("ISBN-11111111111111111")
-									  .build();
-em.persist(rockSchoolVolOne);
-
-InstrumentalString dadarioString = InstrumentalString.builder().name("Dadario XL String")
-															   .price(30000)
-															   .maker("Dadario")
-															   .material("Nickel")
-															   .isCoating("N")
-															   .count(5)
-															   .build();
-em.persist(dadarioString);
-em.flush();
-em.clear();
-
-Product product1 = em.find(Product.class, foderaBassGuitar.getId());
-System.out.println(product1);
-
-Product product2 = em.find(Product.class, rockSchoolVolOne.getId());
-System.out.println(product2);
-
-Product product3 = em.find(Product.class, dadarioString.getId());
-System.out.println(product3);
-
-```
-실행을 하면 어떻게 될까?     
-
-```
-Hibernate: 
-    
-    alter table book 
-       drop 
-       foreign key FK8cjf4cjanicu58p2l5t8d9xvu
-Hibernate: 
-    
-    alter table instrumental 
-       drop 
-       foreign key FKsb4yjag7nk3lvtnd5lslwn67p
-Hibernate: 
-    
-    alter table instrumental_string 
-       drop 
-       foreign key FKidxnw9ymltl6kfrwtgq5ldh0n
-Hibernate: 
-    
-    drop table if exists book
-Hibernate: 
-    
-    drop table if exists instrumental
-Hibernate: 
-    
-    drop table if exists instrumental_string
-Hibernate: 
-    
-    drop table if exists product
-Hibernate: 
-    
-    create table book (
-       book_author varchar(255),
-        isbn varchar(255),
-        book_type varchar(255),
-        id bigint not null,
-        primary key (id)
-    ) engine=InnoDB
-Hibernate: 
-    
-    create table instrumental (
-       ins_body_wood varchar(255),
-        ins_finger_wood varchar(255),
-        int_neck_wood varchar(255),
-        ins_string_cnt integer,
-        ins_type varchar(255),
-        id bigint not null,
-        primary key (id)
-    ) engine=InnoDB
-Hibernate: 
-    
-    create table instrumental_string (
-       string_cnt integer,
-        is_coating varchar(255),
-        string_material varchar(255),
-        id bigint not null,
-        primary key (id)
-    ) engine=InnoDB
-Hibernate: 
-    
-    create table product (
-       product_type varchar(31) not null,
-        id bigint not null auto_increment,
-        maker varchar(255),
-        name varchar(255),
-        price integer not null,
-        primary key (id)
-    ) engine=InnoDB
-Hibernate: 
-    
-    alter table book 
-       add constraint FK8cjf4cjanicu58p2l5t8d9xvu 
-       foreign key (id) 
-       references product (id)
-Hibernate: 
-    
-    alter table instrumental 
-       add constraint FKsb4yjag7nk3lvtnd5lslwn67p 
-       foreign key (id) 
-       references product (id)
-Hibernate: 
-    
-    alter table instrumental_string 
-       add constraint FKidxnw9ymltl6kfrwtgq5ldh0n 
-       foreign key (id) 
-       references product (id)
-Hibernate: 
-    /* insert io.basquiat.model.product.Instrumental
-        */ insert 
-        into
-            product
-            (maker, name, price, product_type) 
-        values
-            (?, ?, ?, 'INSTRUMENTAL')
-Hibernate: 
-    /* insert io.basquiat.model.product.Instrumental
-        */ insert 
-        into
-            instrumental
-            (ins_body_wood, ins_finger_wood, int_neck_wood, ins_string_cnt, ins_type, id) 
-        values
-            (?, ?, ?, ?, ?, ?)
-Hibernate: 
-    /* insert io.basquiat.model.product.Book
-        */ insert 
-        into
-            product
-            (maker, name, price, product_type) 
-        values
-            (?, ?, ?, 'BOOK')
-Hibernate: 
-    /* insert io.basquiat.model.product.Book
-        */ insert 
-        into
-            book
-            (book_author, isbn, book_type, id) 
-        values
-            (?, ?, ?, ?)
-Hibernate: 
-    /* insert io.basquiat.model.product.InstrumentalString
-        */ insert 
-        into
-            product
-            (maker, name, price, product_type) 
-        values
-            (?, ?, ?, 'STRING')
-Hibernate: 
-    /* insert io.basquiat.model.product.InstrumentalString
-        */ insert 
-        into
-            instrumental_string
-            (string_cnt, is_coating, string_material, id) 
-        values
-            (?, ?, ?, ?)
-
-    select
-        product0_.id as id2_3_0_,
-        product0_.maker as maker3_3_0_,
-        product0_.name as name4_3_0_,
-        product0_.price as price5_3_0_,
-        product0_1_.string_cnt as string_c1_2_0_,
-        product0_1_.is_coating as is_coati2_2_0_,
-        product0_1_.string_material as string_m3_2_0_,
-        product0_2_.ins_body_wood as ins_body1_1_0_,
-        product0_2_.ins_finger_wood as ins_fing2_1_0_,
-        product0_2_.int_neck_wood as int_neck3_1_0_,
-        product0_2_.ins_string_cnt as ins_stri4_1_0_,
-        product0_2_.ins_type as ins_type5_1_0_,
-        product0_3_.book_author as book_aut1_0_0_,
-        product0_3_.isbn as isbn2_0_0_,
-        product0_3_.book_type as book_typ3_0_0_,
-        product0_.product_type as product_1_3_0_ 
-    from
-        Product product0_ 
-    left outer join
-        instrumental_string product0_1_ 
-            on product0_.id=product0_1_.id 
-    left outer join
-        instrumental product0_2_ 
-            on product0_.id=product0_2_.id 
-    left outer join
-        book product0_3_ 
-            on product0_.id=product0_3_.id 
-    where
-        product0_.id=?     
-Instrumental(super=Product(id=1, name=Fodera Emperor 5, price=15000000, maker=Fodera Guitar), stringCnt=5, type=BASS, bodyWood=Alder, neckWood=Maple, fingerboardWood=Ebony)
-
-    select
-        product0_.id as id2_3_0_,
-        product0_.maker as maker3_3_0_,
-        product0_.name as name4_3_0_,
-        product0_.price as price5_3_0_,
-        product0_1_.string_cnt as string_c1_2_0_,
-        product0_1_.is_coating as is_coati2_2_0_,
-        product0_1_.string_material as string_m3_2_0_,
-        product0_2_.ins_body_wood as ins_body1_1_0_,
-        product0_2_.ins_finger_wood as ins_fing2_1_0_,
-        product0_2_.int_neck_wood as int_neck3_1_0_,
-        product0_2_.ins_string_cnt as ins_stri4_1_0_,
-        product0_2_.ins_type as ins_type5_1_0_,
-        product0_3_.book_author as book_aut1_0_0_,
-        product0_3_.isbn as isbn2_0_0_,
-        product0_3_.book_type as book_typ3_0_0_,
-        product0_.product_type as product_1_3_0_ 
-    from
-        Product product0_ 
-    left outer join
-        instrumental_string product0_1_ 
-            on product0_.id=product0_1_.id 
-    left outer join
-        instrumental product0_2_ 
-            on product0_.id=product0_2_.id 
-    left outer join
-        book product0_3_ 
-            on product0_.id=product0_3_.id 
-    where
-        product0_.id=?
-Book(super=Product(id=2, name=Rock School Grade 5, price=35000, maker=Hal Leonard), author=Stuart Clayton, type=BOOKFORBASS, isbn=ISBN-11111111111111111)
-
-    select
-        product0_.id as id2_3_0_,
-        product0_.maker as maker3_3_0_,
-        product0_.name as name4_3_0_,
-        product0_.price as price5_3_0_,
-        product0_1_.string_cnt as string_c1_2_0_,
-        product0_1_.is_coating as is_coati2_2_0_,
-        product0_1_.string_material as string_m3_2_0_,
-        product0_2_.ins_body_wood as ins_body1_1_0_,
-        product0_2_.ins_finger_wood as ins_fing2_1_0_,
-        product0_2_.int_neck_wood as int_neck3_1_0_,
-        product0_2_.ins_string_cnt as ins_stri4_1_0_,
-        product0_2_.ins_type as ins_type5_1_0_,
-        product0_3_.book_author as book_aut1_0_0_,
-        product0_3_.isbn as isbn2_0_0_,
-        product0_3_.book_type as book_typ3_0_0_,
-        product0_.product_type as product_1_3_0_ 
-    from
-        Product product0_ 
-    left outer join
-        instrumental_string product0_1_ 
-            on product0_.id=product0_1_.id 
-    left outer join
-        instrumental product0_2_ 
-            on product0_.id=product0_2_.id 
-    left outer join
-        book product0_3_ 
-            on product0_.id=product0_3_.id 
-    where
-        product0_.id=?
-InstrumentalString(super=Product(id=3, name=Dadario XL String, price=30000, maker=Dadario), material=Nickel, isCoating=N, count=5)
-```
-
-오호라 로그가 쪼옴 많긴 하다. 왜냐하면 erd대로 테이블을 생성하는 과정이 있을 것이다. 또한 현재는 각 테이블마다 조인으로 연결되어 있기에 인서트 쿼리도 한 상품당 2번의 쿼리 즉, product와 각 상품의 product_type에 따른 테이블에 인서트를 하는 쿼리가 날아가는 것을 알 수 있다.     
-
-또한 셀렉트 쿼리도 Join을 통해서 가져온다.     
-
-책에서도 그렇고 대부분의 블로그를 보면 이 방식이 가장 장점이 많다고 말한다.     
-
-장점은 테이블의 정규화로 인한 장점으로 저장공간의 효율화를 꼽는다.     
-
-하지만 언제나 trade-off, Prop and cons가 항상 존재하듯이 조인이 많으면 생길 수 있는 성능의 저하를 얘기한다.    
-
-당연히 조회 쿼리가 조인을 하기 때문에 단일 테이블에 비해 조금 복잡함? 그리고 위에서 언급한 인서트 쿼리가 2번 날아가는 점등....      
-
-그럼에도 이것이 최선으로 받아드리는 듯. ~~이것이 최선입니까?~~         
-
-여기서에서 고려해 볼 수 있는 것은 테이블의 성격이나 비지니스의 요구에 따라서 단일 또는 조인 전략을 선택하는 것이 중요한 듯 싶다.     
-
-그리고 마지막 왠간하면? 또는 절대 쓰지 말라고 하는 구현 클래스별 테이블 전략을 한번 알아보자.     
-
-## 구현 클래스별 테이블 전략    
-
-이것은 말 그대로 각 엔티티별로 테이블을 생성하는 방식이다. 책에서는 왠간하면 쓰지 말라고 하는 전략이지만 그래도 스펙이 있으니 한번 구현을 해보자.     
-
-erd는 다음과 같이 변경된다.    
-
-![실행이미지](https://github.com/basquiat78/completedJPA/blob/8.inheritance-mapping/capture/capture5.png)     
-
-뭔가 중복된 컬럼들이 각 테이블에 다 들어가 있다.     
-
-자 그럼 일단 Product쪽의 상속 매핑 전략을 변경해 보자.
-
-```
-package io.basquiat.model.product;
-
-import javax.persistence.DiscriminatorColumn;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Inheritance;
-import javax.persistence.InheritanceType;
-
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
-
-@Entity
-@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
-@DiscriminatorColumn(name = "product_type")  
-@Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@ToString
-public abstract class Product {
-	
-	public Product(String id, String name, int price, String maker) {
-		this.id = id;
-		this.name = name;
-		this.price = price;
-		this.maker = maker;
-	}
-
-	@Id
-	private String id;
-	
-	/** 생산품 명 */
-	private String name;
-	
-	/** 상품 가격 */
-	private int price;
-	
-	/** 제조사 */
-	private String maker;
-
-}
-```
-잘 보면 기본키 매핑이 그냥 직접 매핑이다. 이 이유는 mySql의 경우 Identity전략을 쓰면 오류가 발생한다. 곰곰히 생각해 보니 그럴 수 밖에 없는 것이 클래스별로 테이블을 생성하기 때문에 그런 듯 싶다.     
-
-그 이유는 뒤에서 설명하겠다.     
-
-또한 지금은 직접 매핑이지만 시퀀스 전략을 이용해 볼 수 있다. 하지만 mySql이라 테이블을 생성해서 시퀀스를 흉내내기 때문에 직접 매핑으로 가져갔다.    
-
-그리고 단지  InheritanceType.TABLE_PER_CLASS로 변경했다. 사실 @DiscriminatorColumn도 의미가 없다. 그것은 위에 언급한 대로 클래스별로 테이블을 생성하니 구분값이 의미가 없다.    
-
-기본키를 직접 매핑으로 했기 때문에 각 각의 엔티티도 변경이 좀 생겼다.    
-
-Book
-
-```
-package io.basquiat.model.product;
-
-import javax.persistence.Column;
-import javax.persistence.DiscriminatorValue;
-import javax.persistence.Entity;
-import javax.persistence.Table;
-
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
-
-@Entity
-@Table(name = "book")
-@DiscriminatorValue("BOOK")
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Getter
-@ToString(callSuper = true)
-public class Book extends Product {
-	
-	@Builder
-	public Book(String id, String name, int price, String maker, String author, String type, String isbn) {
-		super(id, name, price, maker);
-		this.author = author;
-		this.type = type;
-		this.isbn = isbn;
-	}
-
-	/** 교재 저자 */
-	@Column(name = "book_author")
-	private String author;
-	
-	/** 교재 악기 타입 */
-	@Column(name = "book_type")
-	private String type;
-	
-	/** 부여된 고유 번호  */
-	private String isbn;
-
-}
-```
-
-Instrumental
-
-```
-package io.basquiat.model.product;
-
-import javax.persistence.Column;
-import javax.persistence.DiscriminatorValue;
-import javax.persistence.Entity;
-import javax.persistence.Table;
-
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
-
-@Entity
-@Table(name = "instrumental")
-@DiscriminatorValue("INSTRUMENTAL")
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Getter
-@ToString(callSuper = true)
-public class Instrumental extends Product {
-
-	@Builder
-	public Instrumental(String id, String name, int price, String maker, int stringCnt, String type, String bodyWood, String neckWood,
-			String fingerboardWood) {
-		super(id, name, price, maker);
-		this.stringCnt = stringCnt;
-		this.type = type;
-		this.bodyWood = bodyWood;
-		this.neckWood = neckWood;
-		this.fingerboardWood = fingerboardWood;
-	}
-	
-	/** 악기의 현수 */
-	@Column(name = "ins_string_cnt")
-	private int stringCnt;
-
-	/** 
-	 * 악기 타입 
-	 * 지금까지 배운 것을 토대로 이 부분은 Enum으로 체크 할 수 있다.
-	 * 테스트에서는 그냥 스트링 타입으로 한다.
-	 * 
+	/**
+	 * 선수의 정보와 그와 관련된 모든 정보를 가져온다.
+	 * @param playerId
 	 */
-	@Column(name = "ins_type")
-	private String type;
-	
-	/** 바디 나무 재질 */
-	@Column(name = "ins_body_wood")
-	private String bodyWood;
-	
-	/** 넥 나무 재질 */
-	@Column(name = "int_neck_wood")
-	private String neckWood;
-	
-	/** 핑거보드 나무 재질 */
-	@Column(name = "ins_finger_wood")
-	private String fingerboardWood;
+	public Player fetchPlayerWithInfoById(Long id);
 	
 }
 ```
+또는 선수의 정보만 가져오는 쿼리와 외래키로 각각의 club과 locker를 가져오는 쿼리를 만들어서 따로 호출하는 방식을 선택할 수 있다.      
 
-InstrumentalString
+그러면 JPA에서는 이것을 어떻게 해결할까?     
+
+그래서 JPA에서 말하는 proxy가 뭔지 한번 살펴보자. ~~책에 있는 내용을 그래도 가져와도 상관없을라나...~~
+
+다시 한번 말하지만 이것은 책에 기초한 내용이기 때문에 출처를 다시 한번 명시해 본다.    
+
+[자바 ORM 표준 JPA 프로그래밍](http://acornpub.co.kr/book/jpa-programmig)     
+
+또한 그 내용을 토대로 나름대로 정리한 것이기 때문에 정확한 정보는 책을 구입하시기 바란다.            
+
+### 지연 로딩을 이해하려면 프록시의 개념을 이해해야 한다.
+
+1. JPA에서 em.find() 말고, em.getReference()라는 메서드도 제공 된다.    
+
+2. em.find() vs  em.getReference()
+	- em.find() 는 DB를 통해서 실제 엔티티 객체를 조회하는 메서드이고 em.getReference() 는 DB의 조회를 미루는 가짜(프록시) 엔티티 객체를 조회하는 메서드이다.
+
+특징은 다음과 같다.     
+
+1. 실제 클래스를 상속 받아서 만들어진다. 따라서 실제 클래스와 모양이 같다. 당연한 건가?     
+
+2. 프록시 객체는 실제 객체의 참조값을 보관한다.     
+
+3. 프록시 객체를 호출하면 프록시 객체는 실제 객체의 메소드 호출하게 된다.     
+
+4. 프록시 객체는 처음 사용할 때 한 번만 초기화된다. 이 때, 프록시 객체가 실제 엔티티로 바뀌는 것은 아니고 이 프록시 객체를 통해서 실제 엔티티에 접근 가능한 상태가 된다.    
+
+5. 1에서 설명했듯이 프록시 객체는 원본 엔티티를 상속받아서 만들어진다. 따라서 타입 체크시 주의해야한다.      
+
+6. 영속성 컨텍스트에 찾는 엔티티가 이미 있으면 em.getReference()를 호출할 때 영속성 컨텍스트에 있는 엔티티를 반환하게 된다.    
+
+7. 하지만 준영속 상태일 때, 프록시를 초기화하면  org.hibernate.LazyInitializationException 예외를 뱉는다.     
+
+자 그럼 이제 코드로 이게 무엇인지 한번 확인해 보자.     
 
 ```
-package io.basquiat.model.product;
+Player son = em.getReference(Player.class, 1L); 
+```
+콘솔에 찍는 코드를 지우고 저렇게만 해서 한번 코드를 실행하면 어떤 일이 벌어질까?     
 
-import javax.persistence.Column;
-import javax.persistence.DiscriminatorValue;
-import javax.persistence.Entity;
-import javax.persistence.Table;
-
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
-
-@Entity
-@Table(name = "instrumental_string")
-@DiscriminatorValue("STRING")
-@Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@ToString(callSuper = true)
-public class InstrumentalString extends Product {
-
-	@Builder
-	public InstrumentalString(String id, String name, int price, String maker, String material, String isCoating, int count) {
-		super(id, name, price, maker);
-		this.material = material;
-		this.isCoating = isCoating;
-		this.count = count;
-	}
-
-	/** 교재 저자 */
-	@Column(name = "string_material")
-	private String material;
-	
-	/** 교재 저자 */
-	@Column(name = "is_coating")
-	private String isCoating;
-	
-	/** 교재 저자 */
-	@Column(name = "string_cnt")
-	private int count;
+```
+7월 25, 2020 11:44:26 오전 org.hibernate.engine.internal.StatisticalLoggingSessionEventListener end
+INFO: Session Metrics {
+    545600 nanoseconds spent acquiring 1 JDBC connections;
+    541200 nanoseconds spent releasing 1 JDBC connections;
+    14931900 nanoseconds spent preparing 1 JDBC statements;
+    1789900 nanoseconds spent executing 1 JDBC statements;
+    0 nanoseconds spent executing 0 JDBC batches;
+    0 nanoseconds spent performing 0 L2C puts;
+    0 nanoseconds spent performing 0 L2C hits;
+    0 nanoseconds spent performing 0 L2C misses;
+    15716100 nanoseconds spent executing 1 flushes (flushing a total of 3 entities and 1 collections);
+    0 nanoseconds spent executing 0 partial-flushes (flushing a total of 0 entities and 0 collections)
 }
+7월 25, 2020 11:44:26 오전 org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl$PoolState stop
+INFO: HHH10001008: Cleaning up connection pool [jdbc:mysql://localhost:3306/basquiat?rewriteBatchedStatements=true&useUnicode=yes&characterEncoding=UTF-8&serverTimezone=Asia/Seoul]
+
 ```
+어라?  em.getReference를 호출하면 쿼리를 날리지 않는다.     
 
-자 그럼 한번 실행을 해보자.    
+그럼 이 코드에서 다음과 같이 한번 콘솔을 찍어보자. 즉, 실제로 값을 한번 뽑아보는 코드를 추가하는 것이다.      
 
 ```
-Instrumental foderaBassGuitar = Instrumental.builder().id("ITEM1DT1LX")
-        														  .name("Fodera Emperor 5")
-        														  .price(15000000)
-        														  .maker("Fodera Guitar")
-        														  .type("BASS")
-        														  .bodyWood("Alder")
-        														  .neckWood("Maple")
-        														  .fingerboardWood("Ebony")
-    														  	  .stringCnt(5)
-    														  	  .build();
-em.persist(foderaBassGuitar);
+Player son = em.getReference(Player.class, 1L);
+System.out.println("======================START===========================");
+System.out.println(son.getName());
+System.out.println("======================END===========================");
+```
+그랬더니
 
-Book rockSchoolVolOne = Book.builder().id("ITEMTD6LLX")
-									  .name("Rock School Grade 5")
-									  .price(35000)
-									  .maker("Hal Leonard")
-									  .author("Stuart Clayton")
-									  .type("BOOKFORBASS")
-									  .isbn("ISBN-11111111111111111")
-									  .build();
-em.persist(rockSchoolVolOne);
+```
+======================START===========================
+Hibernate: 
+    select
+        player0_.id as id1_2_0_,
+        player0_.age as age2_2_0_,
+        player0_.club_id as club_id5_2_0_,
+        player0_.locker_id as locker_i6_2_0_,
+        player0_.name as name3_2_0_,
+        player0_.position as position4_2_0_,
+        club1_.id as id1_0_1_,
+        club1_.name as name2_0_1_,
+        club1_.ranking as ranking3_0_1_,
+        locker2_.id as id1_1_2_,
+        locker2_.name as name2_1_2_,
+        locker2_.position as position3_1_2_ 
+    from
+        player player0_ 
+    left outer join
+        club club1_ 
+            on player0_.club_id=club1_.id 
+    left outer join
+        locker locker2_ 
+            on player0_.locker_id=locker2_.id 
+    where
+        player0_.id=?
+손흥민
+======================END===========================
+```
+내가 원하는 정보를 얻기 위해서 getName()을 하는 순간 그때서야 쿼리를 날린다.     
 
-InstrumentalString dadarioString = InstrumentalString.builder().id("ITEMWDT9UT")
-															   .name("Dadario XL String")
-															   .price(30000)
-															   .maker("Dadario")
-															   .material("Nickel")
-															   .isCoating("N")
-															   .count(5)
-															   .build();
-em.persist(dadarioString);
-em.flush();
+이것은 위에 언급한 특징중 1,2,3,4에 해당한다.     
+
+5번 특징은 잘 모르겠다. 하지만 6번의 경우에는 다음과 같이 코드를 짜면 알 수 있다.     
+
+```
+Player son1 = em.find(Player.class, 1L);
+System.out.println("=================================FIND PLAYER=================================");
+Player son2 = em.getReference(Player.class, 1L);
+System.out.println("======================START===========================");
+System.out.println(son2.getName());
+System.out.println("======================END===========================");
+```
+결과는
+
+```
+Hibernate: 
+    select
+        player0_.id as id1_2_0_,
+        player0_.age as age2_2_0_,
+        player0_.club_id as club_id5_2_0_,
+        player0_.locker_id as locker_i6_2_0_,
+        player0_.name as name3_2_0_,
+        player0_.position as position4_2_0_,
+        club1_.id as id1_0_1_,
+        club1_.name as name2_0_1_,
+        club1_.ranking as ranking3_0_1_,
+        locker2_.id as id1_1_2_,
+        locker2_.name as name2_1_2_,
+        locker2_.position as position3_1_2_ 
+    from
+        player player0_ 
+    left outer join
+        club club1_ 
+            on player0_.club_id=club1_.id 
+    left outer join
+        locker locker2_ 
+            on player0_.locker_id=locker2_.id 
+    where
+        player0_.id=?
+=================================FIND PLAYER=================================
+======================START===========================
+손흥민
+======================END===========================
+```
+즉, 첫 번째에서 코드를 통해서 손흥민 엔티티는 영속성 컨텍스트에서 관리하게 되고 프록시를 통해 호출할 때 영속성 컨텍스트에서 엔티티를 반환해서 가져오기 때문에 쿼리가 날아가지 않은 것이다.     
+
+다음과 같이 조회를 하고 영속성 컨텍스트를 초기화 한 이후에 name을 가져오는 코드를 작성하면 어떻게 될까?     
+
+```
+Player son = em.find(Player.class, 1L);
 em.clear();
-
-Product product1 = em.find(Product.class, foderaBassGuitar.getId());
-System.out.println(product1);
-
-Product product2 = em.find(Product.class, rockSchoolVolOne.getId());
-System.out.println(product2);
-
-Product product3 = em.find(Product.class, dadarioString.getId());
-System.out.println(product3);
+System.out.println(son.getName());
 ```
+로그를 보여주진 않고 그냥 입으로 털어보면 이녀석은 조회를 했는데 엔티티를 반환한 경우이다. 따라서 영속성 컨텍스트를 초기화하게 되면 해당 엔티티는 준영속성 상태이긴 해도 객체에 대한 정보는 있기 때문에 손흥민이라는 이름이 콘솔에 찍히게 된다.     
 
-그럼 결과는 어떻게 나올까?    
+하지만 다음과 같은 코드를 작성하게 되면 어떻게 될까?    
 
 ```
-Hibernate: 
-    
-    drop table if exists book
-Hibernate: 
-    
-    drop table if exists instrumental
-Hibernate: 
-    
-    drop table if exists instrumental_string
-Hibernate: 
-    
-    create table book (
-       id varchar(255) not null,
-        maker varchar(255),
-        name varchar(255),
-        price integer not null,
-        book_author varchar(255),
-        isbn varchar(255),
-        book_type varchar(255),
-        primary key (id)
-    ) engine=InnoDB
-Hibernate: 
-    
-    create table instrumental (
-       id varchar(255) not null,
-        maker varchar(255),
-        name varchar(255),
-        price integer not null,
-        ins_body_wood varchar(255),
-        ins_finger_wood varchar(255),
-        int_neck_wood varchar(255),
-        ins_string_cnt integer,
-        ins_type varchar(255),
-        primary key (id)
-    ) engine=InnoDB
-Hibernate: 
-    
-    create table instrumental_string (
-       id varchar(255) not null,
-        maker varchar(255),
-        name varchar(255),
-        price integer not null,
-        string_cnt integer,
-        is_coating varchar(255),
-        string_material varchar(255),
-        primary key (id)
-    ) engine=InnoDB
-Hibernate: 
-    /* insert io.basquiat.model.product.Instrumental
-        */ insert 
-        into
-            instrumental
-            (maker, name, price, ins_body_wood, ins_finger_wood, int_neck_wood, ins_string_cnt, ins_type, id) 
-        values
-            (?, ?, ?, ?, ?, ?, ?, ?, ?)
-Hibernate: 
-    /* insert io.basquiat.model.product.Book
-        */ insert 
-        into
-            book
-            (maker, name, price, book_author, isbn, book_type, id) 
-        values
-            (?, ?, ?, ?, ?, ?, ?)
-Hibernate: 
-    /* insert io.basquiat.model.product.InstrumentalString
-        */ insert 
-        into
-            instrumental_string
-            (maker, name, price, string_cnt, is_coating, string_material, id) 
-        values
-            (?, ?, ?, ?, ?, ?, ?)
-Hibernate: 
-    select
-        product0_.id as id1_3_0_,
-        product0_.maker as maker2_3_0_,
-        product0_.name as name3_3_0_,
-        product0_.price as price4_3_0_,
-        product0_.string_cnt as string_c1_2_0_,
-        product0_.is_coating as is_coati2_2_0_,
-        product0_.string_material as string_m3_2_0_,
-        product0_.ins_body_wood as ins_body1_1_0_,
-        product0_.ins_finger_wood as ins_fing2_1_0_,
-        product0_.int_neck_wood as int_neck3_1_0_,
-        product0_.ins_string_cnt as ins_stri4_1_0_,
-        product0_.ins_type as ins_type5_1_0_,
-        product0_.book_author as book_aut1_0_0_,
-        product0_.isbn as isbn2_0_0_,
-        product0_.book_type as book_typ3_0_0_,
-        product0_.clazz_ as clazz_0_ 
-    from
-        ( select
-            id,
-            maker,
-            name,
-            price,
-            string_cnt,
-            is_coating,
-            string_material,
-            null as ins_body_wood,
-            null as ins_finger_wood,
-            null as int_neck_wood,
-            null as ins_string_cnt,
-            null as ins_type,
-            null as book_author,
-            null as isbn,
-            null as book_type,
-            1 as clazz_ 
-        from
-            instrumental_string 
-        union
-        all select
-            id,
-            maker,
-            name,
-            price,
-            null as string_cnt,
-            null as is_coating,
-            null as string_material,
-            ins_body_wood,
-            ins_finger_wood,
-            int_neck_wood,
-            ins_string_cnt,
-            ins_type,
-            null as book_author,
-            null as isbn,
-            null as book_type,
-            2 as clazz_ 
-        from
-            instrumental 
-        union
-        all select
-            id,
-            maker,
-            name,
-            price,
-            null as string_cnt,
-            null as is_coating,
-            null as string_material,
-            null as ins_body_wood,
-            null as ins_finger_wood,
-            null as int_neck_wood,
-            null as ins_string_cnt,
-            null as ins_type,
-            book_author,
-            isbn,
-            book_type,
-            3 as clazz_ 
-        from
-            book 
-    ) product0_ 
-where
-    product0_.id=?
-Instrumental(super=Product(id=ITEM1DT1LX, name=Fodera Emperor 5, price=15000000, maker=Fodera Guitar), stringCnt=5, type=BASS, bodyWood=Alder, neckWood=Maple, fingerboardWood=Ebony)
-Hibernate: 
-    select
-        product0_.id as id1_3_0_,
-        product0_.maker as maker2_3_0_,
-        product0_.name as name3_3_0_,
-        product0_.price as price4_3_0_,
-        product0_.string_cnt as string_c1_2_0_,
-        product0_.is_coating as is_coati2_2_0_,
-        product0_.string_material as string_m3_2_0_,
-        product0_.ins_body_wood as ins_body1_1_0_,
-        product0_.ins_finger_wood as ins_fing2_1_0_,
-        product0_.int_neck_wood as int_neck3_1_0_,
-        product0_.ins_string_cnt as ins_stri4_1_0_,
-        product0_.ins_type as ins_type5_1_0_,
-        product0_.book_author as book_aut1_0_0_,
-        product0_.isbn as isbn2_0_0_,
-        product0_.book_type as book_typ3_0_0_,
-        product0_.clazz_ as clazz_0_ 
-    from
-        ( select
-            id,
-            maker,
-            name,
-            price,
-            string_cnt,
-            is_coating,
-            string_material,
-            null as ins_body_wood,
-            null as ins_finger_wood,
-            null as int_neck_wood,
-            null as ins_string_cnt,
-            null as ins_type,
-            null as book_author,
-            null as isbn,
-            null as book_type,
-            1 as clazz_ 
-        from
-            instrumental_string 
-        union
-        all select
-            id,
-            maker,
-            name,
-            price,
-            null as string_cnt,
-            null as is_coating,
-            null as string_material,
-            ins_body_wood,
-            ins_finger_wood,
-            int_neck_wood,
-            ins_string_cnt,
-            ins_type,
-            null as book_author,
-            null as isbn,
-            null as book_type,
-            2 as clazz_ 
-        from
-            instrumental 
-        union
-        all select
-            id,
-            maker,
-            name,
-            price,
-            null as string_cnt,
-            null as is_coating,
-            null as string_material,
-            null as ins_body_wood,
-            null as ins_finger_wood,
-            null as int_neck_wood,
-            null as ins_string_cnt,
-            null as ins_type,
-            book_author,
-            isbn,
-            book_type,
-            3 as clazz_ 
-        from
-            book 
-    ) product0_ 
-where
-    product0_.id=?
-Book(super=Product(id=ITEMTD6LLX, name=Rock School Grade 5, price=35000, maker=Hal Leonard), author=Stuart Clayton, type=BOOKFORBASS, isbn=ISBN-11111111111111111)
-Hibernate: 
-    select
-        product0_.id as id1_3_0_,
-        product0_.maker as maker2_3_0_,
-        product0_.name as name3_3_0_,
-        product0_.price as price4_3_0_,
-        product0_.string_cnt as string_c1_2_0_,
-        product0_.is_coating as is_coati2_2_0_,
-        product0_.string_material as string_m3_2_0_,
-        product0_.ins_body_wood as ins_body1_1_0_,
-        product0_.ins_finger_wood as ins_fing2_1_0_,
-        product0_.int_neck_wood as int_neck3_1_0_,
-        product0_.ins_string_cnt as ins_stri4_1_0_,
-        product0_.ins_type as ins_type5_1_0_,
-        product0_.book_author as book_aut1_0_0_,
-        product0_.isbn as isbn2_0_0_,
-        product0_.book_type as book_typ3_0_0_,
-        product0_.clazz_ as clazz_0_ 
-    from
-        ( select
-            id,
-            maker,
-            name,
-            price,
-            string_cnt,
-            is_coating,
-            string_material,
-            null as ins_body_wood,
-            null as ins_finger_wood,
-            null as int_neck_wood,
-            null as ins_string_cnt,
-            null as ins_type,
-            null as book_author,
-            null as isbn,
-            null as book_type,
-            1 as clazz_ 
-        from
-            instrumental_string 
-        union
-        all select
-            id,
-            maker,
-            name,
-            price,
-            null as string_cnt,
-            null as is_coating,
-            null as string_material,
-            ins_body_wood,
-            ins_finger_wood,
-            int_neck_wood,
-            ins_string_cnt,
-            ins_type,
-            null as book_author,
-            null as isbn,
-            null as book_type,
-            2 as clazz_ 
-        from
-            instrumental 
-        union
-        all select
-            id,
-            maker,
-            name,
-            price,
-            null as string_cnt,
-            null as is_coating,
-            null as string_material,
-            null as ins_body_wood,
-            null as ins_finger_wood,
-            null as int_neck_wood,
-            null as ins_string_cnt,
-            null as ins_type,
-            book_author,
-            isbn,
-            book_type,
-            3 as clazz_ 
-        from
-            book 
-    ) product0_ 
-where
-    product0_.id=?
-InstrumentalString(super=Product(id=ITEMWDT9UT, name=Dadario XL String, price=30000, maker=Dadario), material=Nickel, isCoating=N, count=5)
+try {
+        	
+    	Player son = em.getReference(Player.class, 1L);
+    	em.clear();
+    	System.out.println("======================START===========================");
+    	System.out.println(son.getName());
+    	System.out.println("======================END===========================");
+    	tx.commit();
+} catch(Exception e) {
+	e.printStackTrace();
+    tx.rollback();
+} finally {
+    em.close();
+}
 ```
-각 테이블이 생성된 것을 볼 수 있는데 셀렉트 쿼리가 UNION ALL로 가져오는 쿼리를 볼 수 있다.     
-
-아마도 sql을 좀 잘 아시는 분이라면 이것이 당연하다는 것을 알 수 있다.    
-
-각각의 테이블을 UNIO ALL로 묶어서 하나의 Product로 가져오기 위한 필연의 선택이 되버린다.    
-
-~~하...저렇게 쓰고 싶은가요?~~     
-
-물론 장점이 없지 않을 것이다.     
-
-각각의 상품 타입이 명확하다는 거? 하지만 조회시에 저런 식이라면 일단 성능에서부터 벌써 엄청 손해를 얻게 된다. 장점보다 단점이 더 크다.     
-
-## @MappedSuperclass     
-
-이것은 사실 지금까지 알아본 상속 매핑과는 좀 상관이 없다.    
-
-신입 시절 myBatis기반의 BPM 프로젝트를 처음 시작할 때 팀장님이 erd를 가져오시더니 가장 먼저 하셨던 것은 공통된 것들을 모아둔 CommonVO를 만들고 그 안에 넣어던 것은 다음과 같다.    
-
-1. 처음 생성된 날짜      
-
-2. 처음 생성한 담당자     
-
-3. 수정된 날짜     
-
-4. 수정한 담당자     
-
-5. 업무 형태 (task type)     
-
-6. 부서 아이디      
-
-7. 업무 Role type     
-
-이런 필드를 가진 VO였다.     
-
-물론 모든 테이블에 저런 정보를 담고 있는 것은 아니지만 BPM을 이루는 수많은 업무 액티비티의 공통된 정보였기 때문이다.     
-
-우리가 위에서 쭈욱 공부한 것은 상속 매핑이지만 지금같은 경우에는 특정 엔티티로 작동하는 것이 아니다. 말 그대로 공통 관심사를 분리시켜 상속하기 위한 단순 객체이다.     
-
-io.basquiat.mapsuperclazz에 있는 커스텀, 즉 핸드메이드로 만들어지는 악기과 수제 목걸이를 만드는 공방이 있다고 가정을 하자.    
-
-1. 커스터머: 오더한 사람     
-
-2. 오더 날짜: 주문한 날짜     
-
-3. 완료 날짜: 만들어진 날짜     
-
-4. 루띠어: 만든 사람     
-
-5. 출고 일자: 작업이 완료되서 오더한 사람한테 출고된 날짜     
-
-이런 공통적인 오더 쉬트지를 작성하게 된다.     
-
-예제로 들기에 뭔가 좀 부족해 보이지만 @MappedSuperclass의 예제로 적합해 보여서 일단 이렇게 진행해 볼까 한다.
-
-Common
+이런 경우라면     
 
 ```
-package io.basquiat.model.mapsuperclazz;
+======================START===========================
+org.hibernate.LazyInitializationException: could not initialize proxy [io.basquiat.model.football.Player#1] - no Session
+	at org.hibernate.proxy.AbstractLazyInitializer.initialize(AbstractLazyInitializer.java:170)
+	at org.hibernate.proxy.AbstractLazyInitializer.getImplementation(AbstractLazyInitializer.java:310)
+	at org.hibernate.proxy.pojo.bytebuddy.ByteBuddyInterceptor.intercept(ByteBuddyInterceptor.java:45)
+	at org.hibernate.proxy.ProxyConfiguration$InterceptorDispatcher.intercept(ProxyConfiguration.java:95)
+	at io.basquiat.model.football.Player$HibernateProxy$EkaHCMcT.getName(Unknown Source)
+	at io.basquiat.jpaMain.main(jpaMain.java:27)
+```
+org.hibernate.LazyInitializationException 예외를 뱉어 내는 것을 확인할 수 있다.    
 
-import java.time.LocalDateTime;
+그러면 프록시 객체와 실제 엔티티가 차이가 있는지 다음과 같은 코드롤 통해서 알아볼 수 있다. 5번의 특징에 해당할려나?      
 
-import javax.persistence.Column;
-import javax.persistence.MappedSuperclass;
-import javax.persistence.PrePersist;
+```
+Player son = em.find(Player.class, 1L);
+System.out.println("what? : " + son.getClass());
 
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
+결과는 
+what? : class io.basquiat.model.football.Player
+```
 
-@Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@ToString
-@MappedSuperclass
-public abstract class Common {
+그럼 프록시는     
 
-	public Common(String customer, LocalDateTime orderAt, String luthiers, LocalDateTime completedAt,
-			LocalDateTime deliveryAt) {
-		this.customer = customer;
-		this.orderAt = orderAt;
-		this.luthiers = luthiers;
-		this.completedAt = completedAt;
-	}
+```
+Player son = em.getReference(Player.class, 1L);
+System.out.println("what? : " + son.getClass());
 
-	/** 커스터머 */
-	private String customer;
-	
-	/** 오더 일자 */
-	@Column(name = "order_at")
-	private LocalDateTime orderAt;
-	
-	/** 악기 빌더 */
-	private String luthiers;
-	
-	/** 악기 제작 완료 일자 */
-	@Column(name = "completed_at")
-	private LocalDateTime completedAt;
-	
-	/** 악기 츨고 일자 */
-	@Column(name = "delivery_at")
-	private LocalDateTime deliveryAt;
-	
-	/** insert할때 현재 시간으로 인서트한다. */
-    @PrePersist
-    protected void setUOorderAt() {
-    	orderAt = LocalDateTime.now();
-    }
-    
-    public void completedAt() {
-    	completedAt = LocalDateTime.now();
-    }
-    
-    public void deliveryAt() {
-    	deliveryAt = LocalDateTime.now();
-    }
-	
+결과는 
+what? : class io.basquiat.model.football.Player$HibernateProxy$qjcV1C3l
+```
+오호?
+
+그럼 이렇게 해보면 어떨까?   
+
+```
+Player son1 = em.find(Player.class, 1L);
+System.out.println("what? : " + son1.getClass());
+
+Player son2 = em.getReference(Player.class, 1L);
+System.out.println("what? : " + son2.getClass());
+결과는 
+what? : class io.basquiat.model.football.Player
+what? : class io.basquiat.model.football.Player
+```
+아하! '6. 영속성 컨텍스트에 찾는 엔티티가 이미 있으면 em.getReference()를 호출할 때 영속성 컨텍스트에 있는 엔티티를 반환하게 된다.' 이 특징이 여기서도 증명이 된다.     
+
+오호... 지금까지의 내용을 곰곰히 생각해 본다면 이런 생각이 들것이다.     
+
+'왠지 예상이 되네요. 연관관계로 매핑된 club과 locker도 프록시에 delegate하고 정보가 필요하다면 프록시, 즉 target에서 그때 정보를 가져오게 되는건가요?'    
+
+만일 이런 생각이 들었다면 이제부터 바로 fetch전략에 대해서 알아볼 준비가 되었다는 의미이다.     
+
+원래 책에는 더 많은 이야기들이 있는데 그것들은 난중에 한번에 모아서 다시 한번 설명을 가져볼까 한다.     
+
+## EAGER Loading     
+
+사실 내가 Lazy Loading에 대한 개념을 알게 된것은 사실 몇 년전에 모 대기업에서 sns를 만들면서였다.          
+
+당시 페이스북을 벤치마킹해서 만들었는데 페이스북의 피드를 보면 잘 알 수 있다. 스크롤을 내릴때 어느 영역에 도달할 때 이전 피드를 가져온다는 것을 말이다.     
+
+쇼핑몰을 예로 들어도 그렇다. 특히 모바일에서는 페이징보다는 스크롤 페이징을 하는데 그 수많은 상품들이 전부 화면에 표현되지 않는다.     
+
+스크롤을 내릴 때 포지션을 체크하고 그때 마다 상품들을 가져와서 화면에 뿌리기 때문이다.     
+
+JPA에서도 마찬가지이다. 바로 위에서 언급했던 Proxy개념을 통해서 필요하지 않을 때는 가져오지 않다가 해당 정보가 필요하다면 그 때 가져오는 방식을 지원한다.     
+
+그럼 지금까지 우리가 예제로 들었던 Player로 다시 한번 돌아가자.     
+
+우리는 특별이 어떤 전략을 선택하지 않았지만 쿼리가 나가는 것을 보면 요청시에는 자동으로 조인을 통해서 모든 정보를 가져온다.    
+
+그럼 해당 어노테이션을 한번 따라가보자.    
+
+@ManyToOne
+
+```
+@Target({METHOD, FIELD}) 
+@Retention(RUNTIME)
+
+public @interface ManyToOne {
+    FetchType fetch() default EAGER;
+}
+```
+@OneToOne
+
+```
+public @interface OneToOne {
+    FetchType fetch() default EAGER;
 }
 ```
 
-BassGuitar
+@ManyToMany
 
 ```
-package io.basquiat.model.mapsuperclazz;
+public @interface ManyToMany {
+    FetchType fetch() default LAZY;
+}
+```
 
-import java.time.LocalDateTime;
+@OneToMany
 
-import javax.persistence.Column;
+```
+
+public @interface OneToMany {
+    FetchType fetch() default LAZY;
+}
+```
+다른 건 다 지우고 FetchType에 대해서만 코드를 가져와 봤다.     
+
+현재까지 우리가 Player를 중심으로 사용한 어노테이션의 기본값은 EAGER이다.     
+
+하지만 실무에서는 이것을 사용하지 말라고 권고한다. 거의 뭐 그냥 사용하지 말라고 권고가 아니라 거의 강제적인데 그 이유에는 여러가지가 있지만 다음이 가장 큰 것 같다.   
+
+```
+1. 실무에서는 JPQL을 많이 사용할 텐데 이 때는 즉시로딩의 경우 N+1 문제가 발생한다.     
+2. 즉시 로딩은 생각치 못한 쿼리가 나갈 수 있다.
+```
+
+
+2번째 경우를 먼저 설명하자. 즉 우리가 예상하는 것과는 다른 쿼리가 나갈 수 있다는 것이다. 
+
+사실 코드를 보면 이해할 수 있다.     
+
+```
+Player son = em.find(Player.class, 1L);
+```
+만일 위와 같은 코드를 보면 실제 쿼리가 조인이 되서 날아가리라고는 에상할 수 있나? ~~린정?~~      
+
+물론 이 엔티티를 작성한 사람이거나 JPA의 장인이라면 알 수도 있지만 그냥 코드만으로 보면 '난 조인한 적이 없어'라고 생각할 수 있다.     
+
+그리고 1번의 경우에는 좀 심각하다.     
+
+```
+Player player = em.createQuery("SELECT p FROM Player p", Player.class).getResultList().get(0);
+```
+그냥 이렇게 코드를 짜고 실행하면 어떤 일이 벌어질까?     
+
+```
+Hibernate: 
+    /* SELECT
+        p 
+    FROM
+        Player p */ select
+            player0_.id as id1_2_,
+            player0_.age as age2_2_,
+            player0_.club_id as club_id5_2_,
+            player0_.locker_id as locker_i6_2_,
+            player0_.name as name3_2_,
+            player0_.position as position4_2_ 
+        from
+            player player0_
+Hibernate: 
+    select
+        club0_.id as id1_0_0_,
+        club0_.name as name2_0_0_,
+        club0_.ranking as ranking3_0_0_ 
+    from
+        club club0_ 
+    where
+        club0_.id=?
+Hibernate: 
+    select
+        locker0_.id as id1_1_0_,
+        locker0_.name as name2_1_0_,
+        locker0_.position as position3_1_0_ 
+    from
+        locker locker0_ 
+    where
+        locker0_.id=?
+Hibernate: 
+    /* load io.basquiat.model.football.Player */ select
+        player0_.id as id1_2_2_,
+        player0_.age as age2_2_2_,
+        player0_.club_id as club_id5_2_2_,
+        player0_.locker_id as locker_i6_2_2_,
+        player0_.name as name3_2_2_,
+        player0_.position as position4_2_2_,
+        club1_.id as id1_0_0_,
+        club1_.name as name2_0_0_,
+        club1_.ranking as ranking3_0_0_,
+        locker2_.id as id1_1_1_,
+        locker2_.name as name2_1_1_,
+        locker2_.position as position3_1_1_ 
+    from
+        player player0_ 
+    left outer join
+        club club1_ 
+            on player0_.club_id=club1_.id 
+    left outer join
+        locker locker2_ 
+            on player0_.locker_id=locker2_.id 
+    where
+        player0_.locker_id=?
+```
+어? 왜 3번이 날아가지?     
+
+JPQL로 작성하서 날려보니 이건 뭐....      
+
+1, 2번의 항목이 전부 적용되는 사례가  아닌가?     
+
+이것은 JPQL의 문법을 쉽게 사용하기 위해 고안된 queryDSL에서도 당연히 발생할 수 있다.           
+
+물론 Player정보를 가져올 때는 무조건 클럽 정보를 가져와야 한다는 전제가 있다면 즉시 로딩을 사용할 수 있지만 그럼에도 그런 경우에도 지연로딩을 사용하고 JPQL fetch join나 객체 그래프 탐색을 통해서 가져오는게 좋다라는 것이다.      
+
+따라서 즉시 로딩에 대해서는 별로 할말이 없다. ~~그냥 지연로딩만 사용하자~~      
+
+## LAZY Loading     
+자 그럼 우리는 이제 기존 코드에서 Player, Club, Locker의 연관관계 매핑에 이 전략을 적용시켜 보자.     
+
+Player
+
+```
+package io.basquiat.model.football;
+
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToOne;
 import javax.persistence.Table;
-
-import org.hibernate.annotations.DynamicUpdate;
 
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -1567,57 +489,168 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
+/**
+ * 
+ * created by basquiat
+ *
+ */
 @Entity
-@Table(name = "bass_guitar")
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Table(name = "player")
 @Getter
-@DynamicUpdate
-@ToString(callSuper = true)
-public class BassGuitar extends Common {
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@ToString(exclude = { "footballClub", "locker" })
+public class Player {
 
 	@Builder
-	public BassGuitar(String customer, LocalDateTime orderAt, String luthiers, LocalDateTime completedAt,
-			LocalDateTime deliveryAt, String neckWood, String bodyWood, String fingerboardWood, String pickupType,
-			String preamp) {
-		super(customer, orderAt, luthiers, completedAt, deliveryAt);
-		this.neckWood = neckWood;
-		this.bodyWood = bodyWood;
-		this.fingerboardWood = fingerboardWood;
-		this.pickupType = pickupType;
-		this.preamp = preamp;
+	public Player(String name, int age, String position, Club footballClub, Locker locker) {
+		this.name = name;
+		this.age = age;
+		this.position = position;
+		this.footballClub = footballClub;
+		footballClub.getPlayers().add(this);
+		this.locker = locker;
+		locker.matchingPlayer(this);
 	}
 
+	/** 선수 아이디 */
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 	
-	/** 넥 우드 */
-	@Column(name = "neck_wood")
-	private String neckWood;
+	/** 선수 명 */
+	private String name;
 	
-	/** 바디 우드 */
-	@Column(name = "body_wood")
-	private String bodyWood;
+	/** 선수 나이 */
+	private int age;
+
+	/** 선수 포지션 */
+	private String position;
 	
-	/** 핑거보드 우드 */
-	@Column(name = "finger_wood")
-	private String fingerboardWood;
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "club_id")
+	private Club footballClub;
 	
-	/** 픽업 타입 */
-	@Column(name = "pickup_type")
-	private String pickupType;
-	
-	/** 온보드 프리앰프 이큐 */
-	@Column(name = "preamp")
-	private String preamp;
+	@OneToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "locker_id")
+	private Locker locker;
 	
 }
 ```
-진짜 말 그대로 분리된 공통 부분만 상속한다. 그래서 부모 객체, 즉 Common은 자신은 엔티티가 아니고 단지 필드를 공통으로 사용하기 위한 클래스라는 것을 표시하는 @MappedSuperclass를 붙여준다.     
+Club
 
-즉 이것이 붙은 녀석은 엔티티의 역할을 전혀 하지 못한다.    
+```
+package io.basquiat.model.football;
 
-자 그럼 테스트를 해볼 시간이다.    
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.OneToMany;
+import javax.persistence.Table;
+
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+
+/**
+ * 
+ * created by basquiat
+ *
+ */
+@Entity
+@Table(name = "club")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@ToString(exclude = "players")
+public class Club {
+
+	@Builder
+	public Club(String name, int ranking) {
+		this.name = name;
+		this.ranking = ranking;
+	}
+
+	/** 클럽 아이디 */
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+	
+	/** 클럽 명 */
+	private String name;
+	
+	/** 클럽 랭킹 순위 */
+	private int ranking;
+	
+	@OneToMany(mappedBy = "footballClub", fetch = FetchType.LAZY)
+	private List<Player> players = new ArrayList<>();
+	
+}
+```
+Locker
+
+```
+package io.basquiat.model.football;
+
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+
+/**
+ * 
+ * created by basquiat
+ *
+ */
+@Entity
+@Table(name = "locker")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@ToString(exclude = "player")
+public class Locker {
+
+	@Builder
+	public Locker(String name, String position) {
+		this.name = name;
+		this.position = position;
+	}
+	
+	/** 락커 아이디 */
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+	
+	/** 락커 이름 */
+	private String name;
+
+	/** 락커가 있는 위치 정보 */
+	private String position;
+	
+	@OneToOne(mappedBy = "locker", fetch = FetchType.LAZY)
+	private Player player;
+	
+	public void matchingPlayer(Player player) {
+		this.player = player;
+	}
+}
+```
+@ManyToOne의 경우에는 기본이 Lazy이지만 그냥 명시적으로 적어두자.     
+
+다시 이전 실행했던 코드를 한번 다시 실행해보자.     
 
 ```
 package io.basquiat;
@@ -1627,7 +660,7 @@ import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
 import javax.persistence.Persistence;
 
-import io.basquiat.model.mapsuperclazz.BassGuitar;
+import io.basquiat.model.football.Player;
 
 /**
  * 
@@ -1643,36 +676,11 @@ public class jpaMain {
         tx.begin();
         try {
         	
-        	BassGuitar bassGuitar = BassGuitar.builder().bodyWood("Maple")
-        												.neckWood("Roasted Flame Maple")
-        												.fingerboardWood("Roasted Flame Maple")
-        												.pickupType("HH")
-        												.preamp("Mike Pope 5Knob Preamp")
-        												.customer("Basquiat87")
-        												.luthiers("Vinny Fodera")
-        												.build();
-        	
-        	em.persist(bassGuitar);
-        	em.flush();
-        	em.clear();
-        	
-        	BassGuitar completedGuitar = em.find(BassGuitar.class, 1L);
-        	System.out.println(completedGuitar.toString());
-        	completedGuitar.completedAt();
-        	em.flush();
-        	em.clear();
-        	
-        	BassGuitar deliveryGuitar = em.find(BassGuitar.class, 1L);
-        	System.out.println(deliveryGuitar.toString());
-        	deliveryGuitar.deliveryAt();
-        	em.flush();
-        	em.clear();
-        	
-        	BassGuitar selected = em.find(BassGuitar.class, 1L);
-        	System.out.println(selected.toString());
-        	
+        	Player son = em.find(Player.class, 1L);
+        	System.out.println(son.toString());
         	tx.commit();
         } catch(Exception e) {
+        	e.printStackTrace();
             tx.rollback();
         } finally {
             em.close();
@@ -1681,114 +689,879 @@ public class jpaMain {
     }
     
 }
+```
+결과는 
 
 ```
-다음과 같이 순차적으로 처음 오더한 시간부터 기타가 완료되서 업데이트 하고 배송 준비가 되서 배송하고 나서 다시 셀렉트 이후 정보를 보여주는 단순한 테스트이다.      
-
-```
-Hibernate: 
-    
-    drop table if exists bass_guitar
-Hibernate: 
-    
-    create table bass_guitar (
-       id bigint not null auto_increment,
-        completed_at datetime,
-        customer varchar(255),
-        delivery_at datetime,
-        luthiers varchar(255),
-        order_at datetime,
-        body_wood varchar(255),
-        finger_wood varchar(255),
-        neck_wood varchar(255),
-        pickup_type varchar(255),
-        preamp varchar(255),
-        primary key (id)
-    ) engine=InnoDB
-Hibernate: 
-    /* insert io.basquiat.model.mapsuperclazz.BassGuitar
-        */ insert 
-        into
-            bass_guitar
-            (completed_at, customer, delivery_at, luthiers, order_at, body_wood, finger_wood, neck_wood, pickup_type, preamp) 
-        values
-            (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 Hibernate: 
     select
-        bassguitar0_.id as id1_0_0_,
-        bassguitar0_.completed_at as complete2_0_0_,
-        bassguitar0_.customer as customer3_0_0_,
-        bassguitar0_.delivery_at as delivery4_0_0_,
-        bassguitar0_.luthiers as luthiers5_0_0_,
-        bassguitar0_.order_at as order_at6_0_0_,
-        bassguitar0_.body_wood as body_woo7_0_0_,
-        bassguitar0_.finger_wood as finger_w8_0_0_,
-        bassguitar0_.neck_wood as neck_woo9_0_0_,
-        bassguitar0_.pickup_type as pickup_10_0_0_,
-        bassguitar0_.preamp as preamp11_0_0_ 
+        player0_.id as id1_2_0_,
+        player0_.age as age2_2_0_,
+        player0_.club_id as club_id5_2_0_,
+        player0_.locker_id as locker_i6_2_0_,
+        player0_.name as name3_2_0_,
+        player0_.position as position4_2_0_ 
     from
-        bass_guitar bassguitar0_ 
+        player player0_ 
     where
-        bassguitar0_.id=?
-BassGuitar(super=Common(customer=Basquiat87, orderAt=2020-07-21T23:27:34, luthiers=Vinny Fodera, completedAt=null, deliveryAt=null), id=1, neckWood=Roasted Flame Maple, bodyWood=Maple, fingerboardWood=Roasted Flame Maple, pickupType=HH, preamp=Mike Pope 5Knob Preamp)
+        player0_.id=?
+Player(id=1, name=손흥민, age=27, position=Striker)
+```
+오호? 조인을 하지 않고 선수에 대한 정보만 가져왔다.     
+
+그러면 이제 왜 위에서 Proxy에 대한 개념을 설명했는지 확인을 해 볼 시간이다.    
+
+```
+Player son = em.find(Player.class, 1L);
+System.out.println(son.toString());
+System.out.println("===============손흥민의 클럽 정보 가져오기====================");
+System.out.println(son.getFootballClub().getClass());
+System.out.println(son.getFootballClub());
+System.out.println("===============손흥민의 락커 정보 가져오기====================");
+System.out.println(son.getLocker().getClass());
+System.out.println(son.getLocker());
+```
+결과는 ??
+
+```
 Hibernate: 
-    /* update
-        io.basquiat.model.mapsuperclazz.BassGuitar */ update
-            bass_guitar 
-        set
-            completed_at=? 
+    select
+        player0_.id as id1_2_0_,
+        player0_.age as age2_2_0_,
+        player0_.club_id as club_id5_2_0_,
+        player0_.locker_id as locker_i6_2_0_,
+        player0_.name as name3_2_0_,
+        player0_.position as position4_2_0_ 
+    from
+        player player0_ 
+    where
+        player0_.id=?
+Player(id=1, name=손흥민, age=27, position=Striker)
+===============손흥민의 클럽 정보 가져오기====================
+class io.basquiat.model.football.Club$HibernateProxy$ijM4wlkE
+Hibernate: 
+    select
+        club0_.id as id1_0_0_,
+        club0_.name as name2_0_0_,
+        club0_.ranking as ranking3_0_0_ 
+    from
+        club club0_ 
+    where
+        club0_.id=?
+Club(id=1, name=Tottenham Hotspur Football Club, ranking=9)
+===============손흥민의 락커 정보 가져오기====================
+class io.basquiat.model.football.Locker$HibernateProxy$gLLY0e4U
+Hibernate: 
+    select
+        locker0_.id as id1_1_0_,
+        locker0_.name as name2_1_0_,
+        locker0_.position as position3_1_0_ 
+    from
+        locker locker0_ 
+    where
+        locker0_.id=?
+Locker(id=1, name=손흥민의 락커, position=입구에서 4번째 위치)
+```
+아하 각각의 Proxy가 영속성 컨텍스트에 초기화를 요청해서 실제 엔티티를 생성해서 반환하는 것을 눈으로 확인하는 순간이다.     
+
+## CASCADE
+
+종속이라는 의미를 지니고 있는데 이것은 DB에서 어떤 의미인지 한번 알아보자.     
+
+여러분이 지금까지 테스트하면서 생성된 player, club, locker의 경우를 한번 살펴보자.     
+
+외래키를 가지고 있는 player는 club과 locker과 연관관계 ~~라 하고 종속관계라 말한다~~에 있다.     
+
+그럼 한번 workbench같은 툴에서 club과 locker테이블을 삭제하거나 직접 DROP 명령어를 날려보자.     
+
+```
+drop table club;
+drop table locker;
+```
+그러면 지워지지 않고 
+
+```
+drop table club	Error Code: 3730. Cannot drop table 'club' referenced by a foreign key constraint 'FKh60stqlv4r5dk5hp5gcwvo0n7' on table 'player'.	0.000 sec
+
+drop table locker	Error Code: 3730. Cannot drop table 'locker' referenced by a foreign key constraint 'FKdh2ff6dcjjgupccm2pmddouhw' on table 'player'.	0.000 sec
+
+```
+이런 에러를 만나게 된다.     
+
+그리고 신기한 것은 실제 내부의 데이터를 지워도 똑같은 에러가 발생한다.     
+
+```
+delete from club where id = 1;
+delete from locker where id = 1;
+```
+
+결국 지울려면 player테이블에서 이 둘의 외래키를 가지고 있는 데이터를 지워야 가능하다.     
+
+또는 데이터에서도 마찬가지로 club과 locker의 특정 데이터를 지우려면 해당 pk를 가지고 있는 선수 모두를 그냥 싹다 지워야 한다. ~~싹 다!!!!~~
+
+일단 DB에서는 이런 내용이 있다는 것을 필히 기억하자.     
+
+자 그럼 우리는 이전에 손흥민이 토트넘에 들어가고 자신의 락커를 얻는 코드로 돌아가자.     
+
+그전에 hibernate.hbm2ddl.auto을 create로 변경하자.
+
+```
+// 1. 내가 들어가고 싶은 팀이 무엇인지 살펴본다.
+Club tottenhamFootballClub = Club.builder().name("Tottenham Hotspur Football Club")
+										   .ranking(9)
+										   .build();
+em.persist(tottenhamFootballClub);
+
+// 2. 해당 클럽에는 내가 사용한 락커가 있다. 
+Locker sonsLocker = Locker.builder().name("손흥민의 락커")
+									.position("입구에서 4번째 위치")
+									.build();
+em.persist(sonsLocker);
+
+// 3. 손흥민이 토트넘 소속이 되다!
+Player son = Player.builder().name("손흥민")
+							 .age(27)
+							 .position("Striker")
+							 .footballClub(tottenhamFootballClub)
+							 .locker(sonsLocker)
+							 .build();
+em.persist(son);
+```
+이 코드에서는 클럽, 락커, 손흥민 객체를 em.persist를 통해서 영속성 상태로 만들었다.      
+
+근데 이런 고민이 들것이다.     
+
+'아니 어짜피 손흥민이 주인이니 여기서 클럽과 락커를 세팅할때 해당 엔티티를 영속성 상태로 만들어주면 안되나?'      
+
+이게 무슨 말이냐면 
+
+```
+// 1. 내가 들어가고 싶은 팀이 무엇인지 살펴본다.
+Club tottenhamFootballClub = Club.builder().name("Tottenham Hotspur Football Club")
+										   .ranking(9)
+										   .build();
+
+// 2. 해당 클럽에는 내가 사용한 락커가 있다. 
+Locker sonsLocker = Locker.builder().name("손흥민의 락커")
+									.position("입구에서 4번째 위치")
+									.build();
+
+// 3. 손흥민이 토트넘 소속이 되다!
+Player son = Player.builder().name("손흥민")
+							 .age(27)
+							 .position("Striker")
+							 .footballClub(tottenhamFootballClub)
+							 .locker(sonsLocker)
+							 .build();
+em.persist(son);
+```
+위와 같이 손흥민 객체만 영속성 상태로 만들고 실행하면 어떻게 될까?      
+
+```
+javax.persistence.RollbackException: Error while committing the transaction
+	at org.hibernate.internal.ExceptionConverterImpl.convertCommitException(ExceptionConverterImpl.java:81)
+	at org.hibernate.engine.transaction.internal.TransactionImpl.commit(TransactionImpl.java:104)
+	at io.basquiat.jpaMain.main(jpaMain.java:46)
+Caused by: java.lang.IllegalStateException: org.hibernate.TransientPropertyValueException: object references an unsaved transient instance - save the transient instance before flushing : io.basquiat.model.football.Player.footballClub -> io.basquiat.model.football.Club
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:151)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:181)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:188)
+	at org.hibernate.internal.SessionImpl.doFlush(SessionImpl.java:1364)
+	at org.hibernate.internal.SessionImpl.managedFlush(SessionImpl.java:451)
+	at org.hibernate.internal.SessionImpl.flushBeforeTransactionCompletion(SessionImpl.java:3210)
+	at org.hibernate.internal.SessionImpl.beforeTransactionCompletion(SessionImpl.java:2378)
+	at org.hibernate.engine.jdbc.internal.JdbcCoordinatorImpl.beforeTransactionCompletion(JdbcCoordinatorImpl.java:447)
+	at org.hibernate.resource.transaction.backend.jdbc.internal.JdbcResourceLocalTransactionCoordinatorImpl.beforeCompletionCallback(JdbcResourceLocalTransactionCoordinatorImpl.java:183)
+	at org.hibernate.resource.transaction.backend.jdbc.internal.JdbcResourceLocalTransactionCoordinatorImpl.access$300(JdbcResourceLocalTransactionCoordinatorImpl.java:40)
+	at org.hibernate.resource.transaction.backend.jdbc.internal.JdbcResourceLocalTransactionCoordinatorImpl$TransactionDriverControlImpl.commit(JdbcResourceLocalTransactionCoordinatorImpl.java:281)
+	at org.hibernate.engine.transaction.internal.TransactionImpl.commit(TransactionImpl.java:101)
+	... 1 more
+Caused by: org.hibernate.TransientPropertyValueException: object references an unsaved transient instance - save the transient instance before flushing : io.basquiat.model.football.Player.footballClub -> io.basquiat.model.football.Club
+	at org.hibernate.engine.spi.CascadingActions$8.noCascade(CascadingActions.java:379)
+	at org.hibernate.engine.internal.Cascade.cascade(Cascade.java:167)
+	at org.hibernate.event.internal.AbstractFlushingEventListener.cascadeOnFlush(AbstractFlushingEventListener.java:158)
+	at org.hibernate.event.internal.AbstractFlushingEventListener.prepareEntityFlushes(AbstractFlushingEventListener.java:148)
+	at org.hibernate.event.internal.AbstractFlushingEventListener.flushEverythingToExecutions(AbstractFlushingEventListener.java:81)
+	at org.hibernate.event.internal.DefaultFlushEventListener.onFlush(DefaultFlushEventListener.java:39)
+	at org.hibernate.event.service.internal.EventListenerGroupImpl.fireEventOnEachListener(EventListenerGroupImpl.java:102)
+	at org.hibernate.internal.SessionImpl.doFlush(SessionImpl.java:1360)
+```
+저런 에러가 발생하며 롤백이 실행된다.     
+
+자 그럼 저것이 가능하게 할려면 어떻게 해주면 될까?     
+
+```
+package io.basquiat.model.football;
+
+import javax.persistence.CascadeType;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+
+/**
+ * 
+ * created by basquiat
+ *
+ */
+@Entity
+@Table(name = "player")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@ToString(exclude = { "footballClub", "locker" })
+public class Player {
+
+	@Builder
+	public Player(String name, int age, String position, Club footballClub, Locker locker) {
+		this.name = name;
+		this.age = age;
+		this.position = position;
+		this.footballClub = footballClub;
+		footballClub.getPlayers().add(this);
+		this.locker = locker;
+		locker.matchingPlayer(this);
+	}
+
+	/** 선수 아이디 */
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+	
+	/** 선수 명 */
+	private String name;
+	
+	/** 선수 나이 */
+	private int age;
+
+	/** 선수 포지션 */
+	private String position;
+	
+	@ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+	@JoinColumn(name = "club_id")
+	private Club footballClub;
+	
+	@OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+	@JoinColumn(name = "locker_id")
+	private Locker locker;
+	
+}
+```
+
+이러고 나서 나는 
+
+```
+Club tottenhamFootballClub = Club.builder().name("Tottenham Hotspur Football Club")
+										   .ranking(9)
+										   .build();
+Locker sonsLocker = Locker.builder().name("손흥민의 락커")
+									.position("입구에서 4번째 위치")
+									.build();
+Player son = Player.builder().name("손흥민")
+							 .age(27)
+							 .position("Striker")
+							 .footballClub(tottenhamFootballClub)
+							 .locker(sonsLocker)
+							 .build();
+em.persist(son);
+```
+과 같이 손흥민 객체만 영속성 상태로 만들면 내부적으로 club, locker도 영속성 상태로 만들어준다.      
+
+하지만 이 경우에는 어떤 문제가 있을까?      
+
+```
+em.flush();
+em.clear();
+Player son = em.find(Player.class, 1L);
+em.remove(son);
+```
+손흥민을 디비에서 삭제하게 되면 어떤 일이 벌어질까?    
+
+```
+Hibernate: 
+    select
+        player0_.id as id1_2_0_,
+        player0_.age as age2_2_0_,
+        player0_.club_id as club_id5_2_0_,
+        player0_.locker_id as locker_i6_2_0_,
+        player0_.name as name3_2_0_,
+        player0_.position as position4_2_0_ 
+    from
+        player player0_ 
+    where
+        player0_.id=?
+Hibernate: 
+    select
+        club0_.id as id1_0_0_,
+        club0_.name as name2_0_0_,
+        club0_.ranking as ranking3_0_0_ 
+    from
+        club club0_ 
+    where
+        club0_.id=?
+Hibernate: 
+    select
+        locker0_.id as id1_1_0_,
+        locker0_.name as name2_1_0_,
+        locker0_.position as position3_1_0_ 
+    from
+        locker locker0_ 
+    where
+        locker0_.id=?
+Hibernate: 
+    /* delete io.basquiat.model.football.Player */ delete 
+        from
+            player 
         where
             id=?
 Hibernate: 
-    select
-        bassguitar0_.id as id1_0_0_,
-        bassguitar0_.completed_at as complete2_0_0_,
-        bassguitar0_.customer as customer3_0_0_,
-        bassguitar0_.delivery_at as delivery4_0_0_,
-        bassguitar0_.luthiers as luthiers5_0_0_,
-        bassguitar0_.order_at as order_at6_0_0_,
-        bassguitar0_.body_wood as body_woo7_0_0_,
-        bassguitar0_.finger_wood as finger_w8_0_0_,
-        bassguitar0_.neck_wood as neck_woo9_0_0_,
-        bassguitar0_.pickup_type as pickup_10_0_0_,
-        bassguitar0_.preamp as preamp11_0_0_ 
-    from
-        bass_guitar bassguitar0_ 
-    where
-        bassguitar0_.id=?
-BassGuitar(super=Common(customer=Basquiat87, orderAt=2020-07-21T23:27:34, luthiers=Vinny Fodera, completedAt=2020-07-21T23:27:34, deliveryAt=null), id=1, neckWood=Roasted Flame Maple, bodyWood=Maple, fingerboardWood=Roasted Flame Maple, pickupType=HH, preamp=Mike Pope 5Knob Preamp)
-Hibernate: 
-    /* update
-        io.basquiat.model.mapsuperclazz.BassGuitar */ update
-            bass_guitar 
-        set
-            delivery_at=? 
+    /* delete io.basquiat.model.football.Club */ delete 
+        from
+            club 
         where
             id=?
 Hibernate: 
-    select
-        bassguitar0_.id as id1_0_0_,
-        bassguitar0_.completed_at as complete2_0_0_,
-        bassguitar0_.customer as customer3_0_0_,
-        bassguitar0_.delivery_at as delivery4_0_0_,
-        bassguitar0_.luthiers as luthiers5_0_0_,
-        bassguitar0_.order_at as order_at6_0_0_,
-        bassguitar0_.body_wood as body_woo7_0_0_,
-        bassguitar0_.finger_wood as finger_w8_0_0_,
-        bassguitar0_.neck_wood as neck_woo9_0_0_,
-        bassguitar0_.pickup_type as pickup_10_0_0_,
-        bassguitar0_.preamp as preamp11_0_0_ 
-    from
-        bass_guitar bassguitar0_ 
-    where
-        bassguitar0_.id=?
-BassGuitar(super=Common(customer=Basquiat87, orderAt=2020-07-21T23:27:34, luthiers=Vinny Fodera, completedAt=2020-07-21T23:27:34, deliveryAt=2020-07-21T23:27:34), id=1, neckWood=Roasted Flame Maple, bodyWood=Maple, fingerboardWood=Roasted Flame Maple, pickupType=HH, preamp=Mike Pope 5Knob Preamp)
+    /* delete io.basquiat.model.football.Locker */ delete 
+        from
+            locker 
+        where
+            id=?
 ```
-상속한 Common의 필드를 포함한 테이블이 생성되고 그 이후부터는 그냥 익숙한 로그들이 보인다.     
+어라? club과 locker까지 지워지네????      
 
-만든 김에 목걸이도 만들어 보자.    
+아니 선수 한명을 지웠을 뿐인데 어떻게 보면 부모입장이라고 할 수 있는 club과 locker까지 지워버린다.     
 
-Necklace
+뭐 locker는 이해할 수 있는데 club을 지워???? ~~엄청 위험한 녀석인데?~~
+
+그래서 보통은 이런 관계를 고려해 본다면 cascade의 옵션을 ALL로 두면 안된다.     
+
+CascadeType.ALL -> CascadeType.PERSIST로 변경시켜주면 된다. 즉 영속성 전이를 persist즉, 해당 엔티티에 대해서는 영속성 상태로 만들어 주는 전이만 설정하면 된다.      
+
+~~일단 변경하지 말자~~     
+
+또한 다음과 같은 경우를 한번 보자.     
+
+```
+Player son = em.find(Player.class, 2L);
+em.remove(son.getFootballClub());
+em.remove(son.getLocker());
+tx.commit();
+```
+손흥민의 정보를 가져와서 club과 locker의 정보를 가져와서 remove할려고 하면 사실 delete쿼리가 나가지 않는다.      
+
+그 이유는 무엇일까? ~~이미 위에 DB에서 설명했잖아요!~~      
+
+에러 조차도 없는 것 보니 애초에 지울려고 하면 지워지지 않고 에러를 뱉어낼 것이 자명하니 JPA에서는 이 관계를 알고 delete쿼리를 날리지도 않는듯 싶다.          
+
+그러면 나는 락커의 경우에는 지우고 싶은데?라는 생각이 들것이다.      
+
+그래서 다음과 같이     
+
+```
+package io.basquiat.model.football;
+
+import javax.persistence.CascadeType;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+
+/**
+ * 
+ * created by basquiat
+ *
+ */
+@Entity
+@Table(name = "locker")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@ToString(exclude = "player")
+public class Locker {
+
+	@Builder
+	public Locker(String name, String position) {
+		this.name = name;
+		this.position = position;
+	}
+	
+	/** 락커 아이디 */
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+	
+	/** 락커 이름 */
+	private String name;
+
+	/** 락커가 있는 위치 정보 */
+	private String position;
+	
+	@OneToOne(mappedBy = "locker", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+	private Player player;
+	
+	public void matchingPlayer(Player player) {
+		this.player = player;
+	}
+}
+```
+영속성 전이 옵션을 설정했다.     
+
+그리고...
+
+```
+Player son = em.find(Player.class, 1L);
+em.remove(son.getLocker());
+```
+그리고는 비명소리가 들린다.      
+
+```
+Hibernate: 
+    select
+        player0_.id as id1_2_0_,
+        player0_.age as age2_2_0_,
+        player0_.club_id as club_id5_2_0_,
+        player0_.locker_id as locker_i6_2_0_,
+        player0_.name as name3_2_0_,
+        player0_.position as position4_2_0_ 
+    from
+        player player0_ 
+    where
+        player0_.id=?
+Hibernate: 
+    select
+        locker0_.id as id1_1_0_,
+        locker0_.name as name2_1_0_,
+        locker0_.position as position3_1_0_ 
+    from
+        locker locker0_ 
+    where
+        locker0_.id=?
+Hibernate: 
+    select
+        club0_.id as id1_0_0_,
+        club0_.name as name2_0_0_,
+        club0_.ranking as ranking3_0_0_ 
+    from
+        club club0_ 
+    where
+        club0_.id=?
+Hibernate: 
+    /* delete io.basquiat.model.football.Player */ delete 
+        from
+            player 
+        where
+            id=?
+Hibernate: 
+    /* delete io.basquiat.model.football.Club */ delete 
+        from
+            club 
+        where
+            id=?
+Hibernate: 
+    /* delete io.basquiat.model.football.Locker */ delete 
+        from
+            locker 
+        where
+            id=?
+```
+db에서 cascade에서 설명했던 것 기억나나?     
+
+결국 locker입장에서는 내 자신을 지우려니 일단 player을 지워야 한다. 그리고 Player에서는 club과의 cascade옵션이 ALL로 두었으니 이에 따라 club도 지우고 자신도 지운다.      
+
+~~어마무시한 대참사!!!! 하지만 실제로 있었던 일이다....~~     
+
+자 그래서 다음과 같이 한번 수정을 해봤다.     
+
+Player
+
+```
+package io.basquiat.model.football;
+
+import javax.persistence.CascadeType;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+
+/**
+ * 
+ * created by basquiat
+ *
+ */
+@Entity
+@Table(name = "player")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@ToString(exclude = { "footballClub", "locker" })
+public class Player {
+
+	@Builder
+	public Player(String name, int age, String position, Club footballClub, Locker locker) {
+		this.name = name;
+		this.age = age;
+		this.position = position;
+		this.footballClub = footballClub;
+		footballClub.getPlayers().add(this);
+		this.locker = locker;
+		locker.matchingPlayer(this);
+	}
+
+	/** 선수 아이디 */
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+	
+	/** 선수 명 */
+	private String name;
+	
+	/** 선수 나이 */
+	private int age;
+
+	/** 선수 포지션 */
+	private String position;
+	
+	@ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
+	@JoinColumn(name = "club_id")
+	private Club footballClub;
+	
+	@OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
+	@JoinColumn(name = "locker_id")
+	private Locker locker;
+	
+}
+```
+즉 영속성 상태로 만드는 것까지만 영속성 전이를 할 것이라고 명시한다.     
+
+그리고 Locker쪽에는 
+
+```
+package io.basquiat.model.football;
+
+import javax.persistence.CascadeType;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+
+/**
+ * 
+ * created by basquiat
+ *
+ */
+@Entity
+@Table(name = "locker")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@ToString(exclude = "player")
+public class Locker {
+
+	@Builder
+	public Locker(String name, String position) {
+		this.name = name;
+		this.position = position;
+	}
+	
+	/** 락커 아이디 */
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+	
+	/** 락커 이름 */
+	private String name;
+
+	/** 락커가 있는 위치 정보 */
+	private String position;
+	
+	@OneToOne(mappedBy = "locker", fetch = FetchType.LAZY, cascade = CascadeType.REMOVE)
+	private Player player;
+	
+	public void matchingPlayer(Player player) {
+		this.player = player;
+	}
+}
+```
+삭제일때만 영속성 전이를 할것이다라고 명시하고 
+
+```
+Player son = em.find(Player.class, 1L);
+em.remove(son.getLocker());
+```
+실행하게 되면?    
+
+```
+Hibernate: 
+    select
+        player0_.id as id1_2_0_,
+        player0_.age as age2_2_0_,
+        player0_.club_id as club_id5_2_0_,
+        player0_.locker_id as locker_i6_2_0_,
+        player0_.name as name3_2_0_,
+        player0_.position as position4_2_0_ 
+    from
+        player player0_ 
+    where
+        player0_.id=?
+Hibernate: 
+    select
+        locker0_.id as id1_1_0_,
+        locker0_.name as name2_1_0_,
+        locker0_.position as position3_1_0_ 
+    from
+        locker locker0_ 
+    where
+        locker0_.id=?
+Hibernate: 
+    /* delete io.basquiat.model.football.Player */ delete 
+        from
+            player 
+        where
+            id=?
+Hibernate: 
+    /* delete io.basquiat.model.football.Locker */ delete 
+        from
+            locker 
+        where
+            id=?
+```
+클럽은 지우지 않았다. 왜냐하면 cascade옵션이 persist로 설정되어 있기 때문에 remove에 대한 전이는 여기서 막히게 된다.     
+
+하지만 위에서 손흥민의 락커를 지우려니 결국 손흥민이라는 정보를 먼저 지우고 자신을 지울수 밖에 없다.      
+
+자 그럼 지금까지는 Player의 입장에서 생각을 했는데 반대의 상황 , 즉 Club의 입장에서 한번 생각을 해보자.    
+
+만일 다음과 같은 엔티티를 작성했다과 보자.     
+
+기존의 엔티티와 크게 변경된 것은 없지만 일단     
+
+Club
+
+```
+package io.basquiat.model.football;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.OneToMany;
+import javax.persistence.Table;
+
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+
+/**
+ * 
+ * created by basquiat
+ *
+ */
+@Entity
+@Table(name = "club")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@ToString(exclude = "players")
+public class Club {
+
+	@Builder
+	public Club(String name, int ranking) {
+		this.name = name;
+		this.ranking = ranking;
+	}
+
+	/** 클럽 아이디 */
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+	
+	/** 클럽 명 */
+	private String name;
+	
+	/** 클럽 랭킹 순위 */
+	private int ranking;
+	
+	@OneToMany(mappedBy = "footballClub", fetch = FetchType.LAZY)
+	private List<Player> players = new ArrayList<>();
+	
+	/** 선수를 영입하다 */
+	public void scoutPlayer(Player player) {
+		this.getPlayers().add(player);
+	}
+}
+```
+
+Player
+
+```
+package io.basquiat.model.football;
+
+import javax.persistence.CascadeType;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+
+/**
+ * 
+ * created by basquiat
+ *
+ */
+@Entity
+@Table(name = "player")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@ToString(exclude = { "footballClub", "locker" })
+public class Player {
+
+	@Builder
+	public Player(String name, int age, String position, Club footballClub, Locker locker) {
+		this.name = name;
+		this.age = age;
+		this.position = position;
+		this.footballClub = footballClub;
+		this.locker = locker;
+		locker.matchingPlayer(this);
+	}
+
+	/** 선수 아이디 */
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+	
+	/** 선수 명 */
+	private String name;
+	
+	/** 선수 나이 */
+	private int age;
+
+	/** 선수 포지션 */
+	private String position;
+	
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "club_id")
+	private Club footballClub;
+	
+	@OneToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "locker_id")
+	private Locker locker;
+	
+	/** 클럽에 소속되다 */
+	public void entryClub(Club club) {
+		this.footballClub = club;
+	}
+}
+```
+Locker 
+
+```
+package io.basquiat.model.football;
+
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+
+/**
+ * 
+ * created by basquiat
+ *
+ */
+@Entity
+@Table(name = "locker")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@ToString(exclude = "player")
+public class Locker {
+
+	@Builder
+	public Locker(String name, String position) {
+		this.name = name;
+		this.position = position;
+	}
+	
+	/** 락커 아이디 */
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+	
+	/** 락커 이름 */
+	private String name;
+
+	/** 락커가 있는 위치 정보 */
+	private String position;
+	
+	@OneToOne(mappedBy = "locker", fetch = FetchType.LAZY)
+	private Player player;
+	
+	public void matchingPlayer(Player player) {
+		this.player = player;
+	}
+}
+```
+
+그리고 우리가 기존에 했던 방식대로라면 옵션을 돌려놨기에
 
 ```
 package io.basquiat;
@@ -1798,8 +1571,9 @@ import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
 import javax.persistence.Persistence;
 
-import io.basquiat.model.mapsuperclazz.BassGuitar;
-import io.basquiat.model.mapsuperclazz.Necklace;
+import io.basquiat.model.football.Club;
+import io.basquiat.model.football.Locker;
+import io.basquiat.model.football.Player;
 
 /**
  * 
@@ -1814,36 +1588,39 @@ public class jpaMain {
         EntityTransaction tx = em.getTransaction();
         tx.begin();
         try {
+        	Locker sonsLocker = Locker.builder().name("손흥민의 락커")
+												.position("입구에서 4번째 위치")
+												.build();
+									        	
+        	Player son = Player.builder().name("손흥민")
+										 .age(27)
+										 .position("Striker")
+										 .locker(sonsLocker)
+										 .build();
         	
-        	Necklace necklace = Necklace.builder().material("14K Gold")
-        										  .lineMaterial("14K Gold")
-        										  .color("Gold")
-        										  .shape("Stardust")
-        										  .customer("아리")
-        										  .luthiers("STONEHENGE")
-        										  .build();
-        	
-        	em.persist(necklace);
-        	em.flush();
-        	em.clear();
-        	
-        	Necklace completedNecklace = em.find(Necklace.class, 1L);
-        	System.out.println(completedNecklace.toString());
-        	completedNecklace.completedAt();
-        	em.flush();
-        	em.clear();
-        	
-        	Necklace deliveryNecklace = em.find(Necklace.class, 1L);
-        	System.out.println(deliveryNecklace.toString());
-        	deliveryNecklace.deliveryAt();
-        	em.flush();
-        	em.clear();
-        	
-        	Necklace selected = em.find(Necklace.class, 1L);
-        	System.out.println(selected.toString());
-        	
+        	Locker hugoLocker = Locker.builder().name("위고 요리스의 락커")
+												.position("입구에서 1번째 위치")
+												.build();
+					        	
+			Player hugo = Player.builder().name("Hugo Hadrien Dominique Lloris")
+										 .age(33)
+										 .position("Goal Keeper")
+										 .locker(hugoLocker)
+										 .build();
+			
+			Club tottenhamFootballClub = Club.builder().name("Tottenham Hotspur Football Club")
+													   .ranking(9)
+													   .build();
+        	tottenhamFootballClub.scoutPlayer(hugo);
+        	tottenhamFootballClub.scoutPlayer(son);
+        	em.persist(hugo);
+        	em.persist(son);
+        	em.persist(hugoLocker);
+        	em.persist(sonsLocker);
+			em.persist(tottenhamFootballClub);
         	tx.commit();
         } catch(Exception e) {
+        	e.printStackTrace();
             tx.rollback();
         } finally {
             em.close();
@@ -1853,123 +1630,1079 @@ public class jpaMain {
     
 }
 ```
+위와 같이 각 엔티티별로 모두 영속성 상태로 만들어줘야 한다.     
 
-실행을 해보면    
+확실히 저렇게 좀 많아지면 이게 여간 귀찮은게 아니다. 딱 보면 결국 마지막 club정보가 모든 것을 갖는 형식인데 이런 생각을 해볼 수 있지 않을까?     
 
+'아니 왜 꼭 저렇게 일일히 해줘야 해요? 그냥 tottenhamFootballClub만 해주면 그냥 다 영속성 상태로 만들어주면 안되요??'      
+
+그래서 위에서 한번 해봤던 것처럼 club에다가 이 영속성 전이 옵션을 넣으면 된다.     
+
+자 그럼  club이 선수를 영입하는 코드를 살펴보자.      
+
+```
+@OneToMany(mappedBy = "footballClub", fetch = FetchType.LAZY)
+private List<Player> players = new ArrayList<>();
+	
+/** 선수를 영입하다 */
+public void scoutPlayer(Player player) {
+	this.getPlayers().add(player);
+}
+```
+결국 선수가 추가될 때마다 뭔가 해당 객체를 영속성 상태로 전이를 해주면 되지 않을까? 그래서 다음과 같이 옵션을 주면 된다.      
+
+위에서 진행했던 것과 다르지 않다.           
+
+```
+@OneToMany(mappedBy = "footballClub", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+private List<Player> players = new ArrayList<>();
+
+/** 선수를 영입하다 */
+public void scoutPlayer(Player player) {
+	this.getPlayers().add(player);
+}
+```
+자 근데 우리는 위에서 player에서 locker를 주입받는다. 그럼 여기도?     
+Player코드에서 
+
+```
+@OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+@JoinColumn(name = "locker_id")
+private Locker locker;
+```
+와 같이 cascade를 설정해 주고 
+
+```
+Locker sonsLocker = Locker.builder().name("손흥민의 락커")
+									.position("입구에서 4번째 위치")
+									.build();
+
+Player son = Player.builder().name("손흥민")
+							 .age(27)
+							 .position("Striker")
+							 .locker(sonsLocker)
+							 .build();
+
+Locker hugoLocker = Locker.builder().name("위고 요리스의 락커")
+									.position("입구에서 1번째 위치")
+									.build();
+		        	
+Player hugo = Player.builder().name("Hugo Hadrien Dominique Lloris")
+							 .age(33)
+							 .position("Goal Keeper")
+							 .locker(hugoLocker)
+							 .build();
+
+Club tottenhamFootballClub = Club.builder().name("Tottenham Hotspur Football Club")
+										   .ranking(9)
+										   .build();
+tottenhamFootballClub.scoutPlayer(hugo);
+tottenhamFootballClub.scoutPlayer(son);
+em.persist(tottenhamFootballClub);
+```
+이렇게 해주면 어떨까?     
 
 ```
 Hibernate: 
-    
-    drop table if exists bass_guitar
-Hibernate: 
-    
-    drop table if exists necklace
-Hibernate: 
-    
-    create table bass_guitar (
-       id bigint not null auto_increment,
-        completed_at datetime,
-        customer varchar(255),
-        delivery_at datetime,
-        luthiers varchar(255),
-        order_at datetime,
-        body_wood varchar(255),
-        finger_wood varchar(255),
-        neck_wood varchar(255),
-        pickup_type varchar(255),
-        preamp varchar(255),
-        primary key (id)
-    ) engine=InnoDB
-Hibernate: 
-    
-    create table necklace (
-       id bigint not null auto_increment,
-        completed_at datetime,
-        customer varchar(255),
-        delivery_at datetime,
-        luthiers varchar(255),
-        order_at datetime,
-        color varchar(255),
-        lineMaterial varchar(255),
-        material varchar(255),
-        shape varchar(255),
-        primary key (id)
-    ) engine=InnoDB
-Hibernate: 
-    /* insert io.basquiat.model.mapsuperclazz.Necklace
+    /* insert io.basquiat.model.football.Club
         */ insert 
         into
-            necklace
-            (completed_at, customer, delivery_at, luthiers, order_at, color, lineMaterial, material, shape) 
+            club
+            (name, ranking) 
         values
-            (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (?, ?)
+Hibernate: 
+    /* insert io.basquiat.model.football.Locker
+        */ insert 
+        into
+            locker
+            (name, position) 
+        values
+            (?, ?)
+Hibernate: 
+    /* insert io.basquiat.model.football.Player
+        */ insert 
+        into
+            player
+            (age, club_id, locker_id, name, position) 
+        values
+            (?, ?, ?, ?, ?)
+Hibernate: 
+    /* insert io.basquiat.model.football.Locker
+        */ insert 
+        into
+            locker
+            (name, position) 
+        values
+            (?, ?)
+Hibernate: 
+    /* insert io.basquiat.model.football.Player
+        */ insert 
+        into
+            player
+            (age, club_id, locker_id, name, position) 
+        values
+            (?, ?, ?, ?, ?)
+```
+오! 만일 저 위의 실행 코드를 실행할 때 각 엔티티에 설정했던 cascade옵션을 지우면 클럽 정보만 딸랑 들어가는 것을 보게 될것이다.      
+
+자. 근데 이런 걸 한번 생각해 보자.     
+
+그럴 일이 없겠지만 만일 club이 사라졌다고 하자.     
+
+```
+토트넘 구단이 너무 어려워져서 구단 해체!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
+```
+이런 기사가 뜬거야!!!  그래서  다음과 같이     
+
+```
+Locker sonsLocker = Locker.builder().name("손흥민의 락커")
+												.position("입구에서 4번째 위치")
+												.build();
+
+Player son = Player.builder().name("손흥민")
+							 .age(27)
+							 .position("Striker")
+							 .locker(sonsLocker)
+							 .build();
+
+Locker hugoLocker = Locker.builder().name("위고 요리스의 락커")
+									.position("입구에서 1번째 위치")
+									.build();
+		        	
+Player hugo = Player.builder().name("Hugo Hadrien Dominique Lloris")
+							 .age(33)
+							 .position("Goal Keeper")
+							 .locker(hugoLocker)
+							 .build();
+
+Club tottenhamFootballClub = Club.builder().name("Tottenham Hotspur Football Club")
+										   .ranking(9)
+										   .build();
+tottenhamFootballClub.scoutPlayer(hugo);
+tottenhamFootballClub.scoutPlayer(son);
+em.persist(tottenhamFootballClub);
+em.flush();
+em.clear();
+
+Club selected = em.find(Club.class, 1L);
+em.remove(selected);
+
+List<Player> list = em.createQuery("SELECT p FROM Player p", Player.class).getResultList();
+System.out.println(list.toString());
+```
+이렇게 한번 실행해 보자. 
+
+```
 Hibernate: 
     select
-        necklace0_.id as id1_1_0_,
-        necklace0_.completed_at as complete2_1_0_,
-        necklace0_.customer as customer3_1_0_,
-        necklace0_.delivery_at as delivery4_1_0_,
-        necklace0_.luthiers as luthiers5_1_0_,
-        necklace0_.order_at as order_at6_1_0_,
-        necklace0_.color as color7_1_0_,
-        necklace0_.lineMaterial as linemate8_1_0_,
-        necklace0_.material as material9_1_0_,
-        necklace0_.shape as shape10_1_0_ 
+        club0_.id as id1_0_0_,
+        club0_.name as name2_0_0_,
+        club0_.ranking as ranking3_0_0_ 
     from
-        necklace necklace0_ 
+        club club0_ 
     where
-        necklace0_.id=?
-Necklace(super=Common(customer=아리, orderAt=2020-07-21T23:39:30, luthiers=STONEHENGE, completedAt=null, deliveryAt=null), id=1, material=14K Gold, lineMaterial=14K Gold, color=Gold, shape=Stardust)
+        club0_.id=?
 Hibernate: 
-    /* update
-        io.basquiat.model.mapsuperclazz.Necklace */ update
-            necklace 
-        set
-            completed_at=? 
+    select
+        players0_.club_id as club_id5_2_0_,
+        players0_.id as id1_2_0_,
+        players0_.id as id1_2_1_,
+        players0_.age as age2_2_1_,
+        players0_.club_id as club_id5_2_1_,
+        players0_.locker_id as locker_i6_2_1_,
+        players0_.name as name3_2_1_,
+        players0_.position as position4_2_1_ 
+    from
+        player players0_ 
+    where
+        players0_.club_id=?
+Hibernate: 
+    select
+        locker0_.id as id1_1_0_,
+        locker0_.name as name2_1_0_,
+        locker0_.position as position3_1_0_ 
+    from
+        locker locker0_ 
+    where
+        locker0_.id=?
+Hibernate: 
+    select
+        locker0_.id as id1_1_0_,
+        locker0_.name as name2_1_0_,
+        locker0_.position as position3_1_0_ 
+    from
+        locker locker0_ 
+    where
+        locker0_.id=?
+Hibernate: 
+    /* delete io.basquiat.model.football.Player */ delete 
+        from
+            player 
         where
             id=?
 Hibernate: 
-    select
-        necklace0_.id as id1_1_0_,
-        necklace0_.completed_at as complete2_1_0_,
-        necklace0_.customer as customer3_1_0_,
-        necklace0_.delivery_at as delivery4_1_0_,
-        necklace0_.luthiers as luthiers5_1_0_,
-        necklace0_.order_at as order_at6_1_0_,
-        necklace0_.color as color7_1_0_,
-        necklace0_.lineMaterial as linemate8_1_0_,
-        necklace0_.material as material9_1_0_,
-        necklace0_.shape as shape10_1_0_ 
-    from
-        necklace necklace0_ 
-    where
-        necklace0_.id=?
-Necklace(super=Common(customer=아리, orderAt=2020-07-21T23:39:30, luthiers=STONEHENGE, completedAt=2020-07-21T23:39:30, deliveryAt=null), id=1, material=14K Gold, lineMaterial=14K Gold, color=Gold, shape=Stardust)
-Hibernate: 
-    /* update
-        io.basquiat.model.mapsuperclazz.Necklace */ update
-            necklace 
-        set
-            delivery_at=? 
+    /* delete io.basquiat.model.football.Locker */ delete 
+        from
+            locker 
         where
             id=?
 Hibernate: 
+    /* delete io.basquiat.model.football.Player */ delete 
+        from
+            player 
+        where
+            id=?
+Hibernate: 
+    /* delete io.basquiat.model.football.Locker */ delete 
+        from
+            locker 
+        where
+            id=?
+Hibernate: 
+    /* delete io.basquiat.model.football.Club */ delete 
+        from
+            club 
+        where
+            id=?
+Hibernate: 
+    /* SELECT
+        p 
+    FROM
+        Player p */ select
+            player0_.id as id1_2_,
+            player0_.age as age2_2_,
+            player0_.club_id as club_id5_2_,
+            player0_.locker_id as locker_i6_2_,
+            player0_.name as name3_2_,
+            player0_.position as position4_2_ 
+        from
+            player player0_
+
+```
+워!!!! club하나 지웠더니 cascade가 ALL이면 모든 옵션에 대해서이기 때문에 remove가 전파가 되고 Player에서도 locker에 대한 옵션도 ALL이니 클럽 하나 지우기 위해서 locker를 먼저 싹다 지우고 등록된 선수를 전부 싹다 지우고 자신을 지우는 어마무시한 쿼리가 날아간다.     
+
+뭔가..... 느껴지는 게 있나?     
+
+이런 기능이 있고 뭔가 좋아보이니 여기저기 사용하다 보면 어떤 일이 벌어질지 모른다.    
+
+이거 하나 잘못 쓰면 기존의 쿼리에서는 상상할 수 없는 짓을 JPA가 하게 된다.      
+
+만일 실수로라도 club테이블에서 어느 특정 클럽을 지우는 쿼리를 날린다 해도 위에서 언급했던 cascade설정으로 인해서 바로 오류를 내보내는데 JPA는 그냥 얄짤없다.     
+
+```
+이 데이터는 cascade가 설정되어 있는 녀석이라 지울 수 없는데 그런데도 지워줄까? ~~CascadeType.ALL이야~~
+
+어 그래? 알았어! 그럼 외래키를 가지고 있는 player의 모든 정보를 지워야지? 어 근데 player와 연관괸 locker도 있는데 이넘도  CascadeType.ALL이네?    
+
+이넘도 지우고 player도 지우고 club을 지워야지~~~
+```
+이렇게 되버리는 것이다....     
+
+물론 locker의 경우는 그렇다고 생각할 수 있다. 선수가 사라졌으니 그 정보가 존재할 필요가 없을 수도 있으니깐.      
+
+하지만 이런 옵션들이 여기저기 퍼져있으면 각 각의 테이블이 어떤 이유로 pk-fk가 엮어 있다면 진짜 무슨 일이 벌어질지 모른다. ~~무서버~~      
+
+원하지 않는 정보까지 그냥 지워져버리는 이런 일이 벌어지는 것을 묵도할 것인가?      
+
+그래서 보통은 이런 기능을 사용하기 위해서는 해당 기능을 사용하는 곳의 테이블과의 관계를 잘 파악해야 한다.      
+
+일단 이 cascade의 옵션에 대한 정보를 한번 살펴보자.     
+
+1. CascadeType.RESIST     
+	- 엔티티를 생성하고, 연관 엔티티를 추가하였을 때 persist() 를 수행하면 연관 엔티티도 함께 persist()가 수행된다.     
+	    만약 연관 엔티티가 DB에 저장이 되어있으면 다시하며 persist 를 하는 것이기때문에  detached entity passed to persist Exception이 발생한다.     
+	   이경우에는 CascadeType.MERGE를 사용한다.     
+
+2. CascadeType.MERGE     
+	- 트랜잭션이 종료되고 detach 상태에서 연관 엔티티를 추가하거나 변경된 이후에 부모 엔티티가 merge()를 수행하게 되면 변경사항이 적용된다.     
+	   연관 엔티티의 추가 및 수정 모두 반영된다.    
+
+3. CascadeType.REMOVE     
+	- 삭제 시 연관된 엔티티도 같이 삭제된다.    
+	
+4. CascadeType.DETACH    
+	- 부모 엔티티가 detach()를 수행하게 되면, 연관된 엔티티도 detach() 상태가 되어 변경사항이 반영되지 않는다.
+
+5. CascadeType.ALL
+	- 모든 Cascade 적용한다.      
+
+그래서 보통은 실무에서는 이것을 쓰는 경우에는 보통 CascadeType.PERSIST와 상황에 따라서 CascadeType.MERGE옵션을 배열로 설정해서 사용한다고 하는데...
+
+```
+cascade={CascadeType.REFRESH, CascadeType.MERGE}
+
+cascade={CascadeType.PERSIST, CascadeType.MERGE}
+```
+뭐 이런식으로?
+
+이것은 사실 연관관계와는 좀 상관이 없는 것 같다. 잘 쓰면 정말 좋지만 잘못쓰면 독이 되는데 그래서 보통은 stackoverflow나 여러 블로그 글들을 보면 이에 대해서 다양한 방법을 제시하는데 공통된 것이 몇가지 있다.
+
+1. 부모와 자식의 관계가 그 둘에 한정된 경우, 즉 참조하는 곳이 한군데일 경우           
+
+2. 한쪽에만 걸어서 제한적으로만 사용한다.      
+
+물론 이와 관련해서 이런 부분은 고려해 볼만하다.      
+
+게시판마다 특징이 다른 곳이 있는데 댓글에 답글이 달린 형식인 경우에는 답글이 있으면 댓글이 지워지지 않는 경우도 있지만 댓글을 지우면 그 하위에 붙은 답글도 지워지는 게시판도 있을 것이다.      
+
+정책적인 부분일 수도 있지만 이런 경우에는 한번 고려해 볼만 하다. 또는 게시판에 댓글의 경우에도 마찬가지.          
+
+댓글이 달린 게시판은 지울 수 없는 정책이거나 지울 수 있다면 그 게시판에 달린 댓글도 전부 지운다든가?           
+
+그리고 cascade와는 결이 좀 약간 다르긴 하지만 다음과 같은 녀석이 있다.     
+
+## orphanRemoval     
+
+고아를 지운다? 왠 뜬금없는 고아?      
+
+일단 지금까지 설정해 두었던 모든 cascade옵션을 각 엔티티에서 지우고 시작한다.     
+
+그리고 다음과 같은 시나리오를 한번 생각해 보자.     
+
+위에서 예제를 들었던 토트넘 구단이 해제되었다는 예제를 들어서 다음과 같이 코딩을 하면 우리는 예상할 수 있는 것은 바로 무결성 조건, 즉 다른 테이블들과의 관계로 인해서 지워지지 않는다.    
+
+```
+Locker sonsLocker = Locker.builder().name("손흥민의 락커")
+											.position("입구에서 4번째 위치")
+											.build();
+
+Player son = Player.builder().name("손흥민")
+							 .age(27)
+							 .position("Striker")
+							 .locker(sonsLocker)
+							 .build();
+
+Locker hugoLocker = Locker.builder().name("위고 요리스의 락커")
+									.position("입구에서 1번째 위치")
+									.build();
+		        	
+Player hugo = Player.builder().name("Hugo Hadrien Dominique Lloris")
+							 .age(33)
+							 .position("Goal Keeper")
+							 .locker(hugoLocker)
+							 .build();
+
+Club tottenhamFootballClub = Club.builder().name("Tottenham Hotspur Football Club")
+										   .ranking(9)
+										   .build();
+tottenhamFootballClub.scoutPlayer(hugo);
+tottenhamFootballClub.scoutPlayer(son);
+em.persist(hugo);
+em.persist(son);
+em.persist(hugoLocker);
+em.persist(sonsLocker);
+em.persist(tottenhamFootballClub);
+em.flush();
+em.clear();
+
+Club selected = em.find(Club.class, 1L);
+em.remove(selected);
+tx.commit();
+
+result 
+
+ERROR: Cannot delete or update a parent row: a foreign key constraint fails (`basquiat`.`player`, CONSTRAINT `FKh60stqlv4r5dk5hp5gcwvo0n7` FOREIGN KEY (`club_id`) REFERENCES `club` (`id`))
+javax.persistence.RollbackException: Error while committing the transaction
+	at org.hibernate.internal.ExceptionConverterImpl.convertCommitException(ExceptionConverterImpl.java:81)
+	at org.hibernate.engine.transaction.internal.TransactionImpl.commit(TransactionImpl.java:104)
+	at io.basquiat.jpaMain.main(jpaMain.java:63)
+Caused by: javax.persistence.PersistenceException: org.hibernate.exception.ConstraintViolationException: could not execute batch
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:154)
+	at org.hibernate.internal.ExceptionConverterImpl.convert(ExceptionConverterImpl.java:181)
+	at org.hibernate.internal.ExceptionConverterImpl.convertCommitException(ExceptionConverterImpl.java:65)
+	... 2 more
+Caused by: org.hibernate.exception.ConstraintViolationException: could not execute batch
+	at org.hibernate.exception.internal.SQLStateConversionDelegate.convert(SQLStateConversionDelegate.java:109)
+	at org.hibernate.exception.internal.StandardSQLExceptionConverter.convert(StandardSQLExceptionConverter.java:42)
+	at org.hibernate.engine.jdbc.spi.SqlExceptionHelper.convert(SqlExceptionHelper.java:113)
+	at org.hibernate.engine.jdbc.batch.internal.BatchingBatch.performExecution(BatchingBatch.java:129)
+	at org.hibernate.engine.jdbc.batch.internal.BatchingBatch.doExecuteBatch(BatchingBatch.java:105)
+	at org.hibernate.engine.jdbc.batch.internal.AbstractBatchImpl.execute(AbstractBatchImpl.java:148)
+	at org.hibernate.engine.jdbc.internal.JdbcCoordinatorImpl.executeBatch(JdbcCoordinatorImpl.java:198)
+	at org.hibernate.engine.spi.ActionQueue.executeActions(ActionQueue.java:633)
+	at org.hibernate.engine.spi.ActionQueue.lambda$executeActions$1(ActionQueue.java:478)
+	at java.util.LinkedHashMap.forEach(LinkedHashMap.java:684)
+	at org.hibernate.engine.spi.ActionQueue.executeActions(ActionQueue.java:475)
+	at org.hibernate.event.internal.AbstractFlushingEventListener.performExecutions(AbstractFlushingEventListener.java:348)
+	at org.hibernate.event.internal.DefaultFlushEventListener.onFlush(DefaultFlushEventListener.java:40)
+	at org.hibernate.event.service.internal.EventListenerGroupImpl.fireEventOnEachListener(EventListenerGroupImpl.java:102)
+	at org.hibernate.internal.SessionImpl.doFlush(SessionImpl.java:1360)
+	at org.hibernate.internal.SessionImpl.managedFlush(SessionImpl.java:451)
+	at org.hibernate.internal.SessionImpl.flushBeforeTransactionCompletion(SessionImpl.java:3210)
+	at org.hibernate.internal.SessionImpl.beforeTransactionCompletion(SessionImpl.java:2378)
+	at org.hibernate.engine.jdbc.internal.JdbcCoordinatorImpl.beforeTransactionCompletion(JdbcCoordinatorImpl.java:447)
+	at org.hibernate.resource.transaction.backend.jdbc.internal.JdbcResourceLocalTransactionCoordinatorImpl.beforeCompletionCallback(JdbcResourceLocalTransactionCoordinatorImpl.java:183)
+	at org.hibernate.resource.transaction.backend.jdbc.internal.JdbcResourceLocalTransactionCoordinatorImpl.access$300(JdbcResourceLocalTransactionCoordinatorImpl.java:40)
+	at org.hibernate.resource.transaction.backend.jdbc.internal.JdbcResourceLocalTransactionCoordinatorImpl$TransactionDriverControlImpl.commit(JdbcResourceLocalTransactionCoordinatorImpl.java:281)
+	at org.hibernate.engine.transaction.internal.TransactionImpl.commit(TransactionImpl.java:101)
+	... 1 more
+Caused by: java.sql.BatchUpdateException: Cannot delete or update a parent row: a foreign key constraint fails (`basquiat`.`player`, CONSTRAINT `FKh60stqlv4r5dk5hp5gcwvo0n7` FOREIGN KEY (`club_id`) REFERENCES `club` (`id`))
+	at sun.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
+	at sun.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:62)
+	at sun.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
+	at java.lang.reflect.Constructor.newInstance(Constructor.java:423)
+	at com.mysql.cj.util.Util.handleNewInstance(Util.java:192)
+	at com.mysql.cj.util.Util.getInstance(Util.java:167)
+	at com.mysql.cj.util.Util.getInstance(Util.java:174)
+	at com.mysql.cj.jdbc.exceptions.SQLError.createBatchUpdateException(SQLError.java:224)
+	at com.mysql.cj.jdbc.ClientPreparedStatement.executeBatchSerially(ClientPreparedStatement.java:853)
+	at com.mysql.cj.jdbc.ClientPreparedStatement.executeBatchInternal(ClientPreparedStatement.java:435)
+	at com.mysql.cj.jdbc.StatementImpl.executeBatch(StatementImpl.java:796)
+	at org.hibernate.engine.jdbc.batch.internal.BatchingBatch.performExecution(BatchingBatch.java:119)
+	... 20 more
+Caused by: java.sql.SQLIntegrityConstraintViolationException: Cannot delete or update a parent row: a foreign key constraint fails (`basquiat`.`player`, CONSTRAINT `FKh60stqlv4r5dk5hp5gcwvo0n7` FOREIGN KEY (`club_id`) REFERENCES `club` (`id`))
+	at com.mysql.cj.jdbc.exceptions.SQLError.createSQLException(SQLError.java:117)
+	at com.mysql.cj.jdbc.exceptions.SQLError.createSQLException(SQLError.java:97)
+	at com.mysql.cj.jdbc.exceptions.SQLExceptionsMapping.translateException(SQLExceptionsMapping.java:122)
+	at com.mysql.cj.jdbc.ClientPreparedStatement.executeInternal(ClientPreparedStatement.java:953)
+	at com.mysql.cj.jdbc.ClientPreparedStatement.executeUpdateInternal(ClientPreparedStatement.java:1092)
+	at com.mysql.cj.jdbc.ClientPreparedStatement.executeBatchSerially(ClientPreparedStatement.java:832)
+	... 23 more
+```
+근데 만일 club을 지워야만 한다면 어떻게 할까?     
+
+아마도 club에 속한 모든 player를 지우고 (locker도 지워주면 더 좋고) 클럽을 지우면 될 것이다.      
+
+근데 상상을 해보자. 그럴려면 해당 선수를 지우는 로직을 또 태워야 한다.      
+
+물론 이전 테스트처럼 cascade옵션을 주면 되지만 orphanRemoval을 이용할 수 도 있다.    
+
+자 그럼 Club엔티티에 다음과 같이 코드를 추가해 보자.     
+
+```
+package io.basquiat.model.football;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.persistence.CascadeType;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.OneToMany;
+import javax.persistence.Table;
+
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+
+/**
+ * 
+ * created by basquiat
+ *
+ */
+@Entity
+@Table(name = "club")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@ToString(exclude = "players")
+public class Club {
+
+	@Builder
+	public Club(String name, int ranking) {
+		this.name = name;
+		this.ranking = ranking;
+	}
+
+	/** 클럽 아이디 */
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+	
+	/** 클럽 명 */
+	private String name;
+	
+	/** 클럽 랭킹 순위 */
+	private int ranking;
+	
+	@OneToMany(mappedBy = "footballClub", fetch = FetchType.LAZY, orphanRemoval = true)
+	private List<Player> players = new ArrayList<>();
+	
+	/** 선수를 영입하다 */
+	public void scoutPlayer(Player player) {
+		player.entryClub(this);
+		this.getPlayers().add(player);
+	}
+}
+```
+그리고 이전에 테스트했던 코드를 다시 실행해 보면 어떤 일이 벌어질까?    
+
+```
+Hibernate: 
     select
-        necklace0_.id as id1_1_0_,
-        necklace0_.completed_at as complete2_1_0_,
-        necklace0_.customer as customer3_1_0_,
-        necklace0_.delivery_at as delivery4_1_0_,
-        necklace0_.luthiers as luthiers5_1_0_,
-        necklace0_.order_at as order_at6_1_0_,
-        necklace0_.color as color7_1_0_,
-        necklace0_.lineMaterial as linemate8_1_0_,
-        necklace0_.material as material9_1_0_,
-        necklace0_.shape as shape10_1_0_ 
+        club0_.id as id1_0_0_,
+        club0_.name as name2_0_0_,
+        club0_.ranking as ranking3_0_0_ 
     from
-        necklace necklace0_ 
+        club club0_ 
     where
-        necklace0_.id=?
-Necklace(super=Common(customer=아리, orderAt=2020-07-21T23:39:30, luthiers=STONEHENGE, completedAt=2020-07-21T23:39:30, deliveryAt=2020-07-21T23:39:30), id=1, material=14K Gold, lineMaterial=14K Gold, color=Gold, shape=Stardust)
+        club0_.id=?
+Hibernate: 
+    select
+        players0_.club_id as club_id5_2_0_,
+        players0_.id as id1_2_0_,
+        players0_.id as id1_2_1_,
+        players0_.age as age2_2_1_,
+        players0_.club_id as club_id5_2_1_,
+        players0_.locker_id as locker_i6_2_1_,
+        players0_.name as name3_2_1_,
+        players0_.position as position4_2_1_ 
+    from
+        player players0_ 
+    where
+        players0_.club_id=?
+Hibernate: 
+    /* delete io.basquiat.model.football.Player */ delete 
+        from
+            player 
+        where
+            id=?
+Hibernate: 
+    /* delete io.basquiat.model.football.Player */ delete 
+        from
+            player 
+        where
+            id=?
+Hibernate: 
+    /* delete io.basquiat.model.football.Club */ delete 
+        from
+            club 
+        where
+            id=?
+```
+결과 로그만 보면 해당 클럽에 속한 player정보를 지우고 club을 지운다.      
+
+즉 어떻게 보면 부모입장인 club에서는 자신이 지워지기에 자신만 지워진다면 해당 클럽에 속한 player는 말 그대로 쓸데 없이 남아있는 데이터, 즉 고아가 된다. 그런 입장에서 이것은 자식 정보들을 모두 지우는 역할을 한다.      
+
+일단 locker의 경우는 지워지지가 않으니 그럼 한번 Player에도 locker에 대해서 한번 이것을 설정해 보자.     
+
+```
+package io.basquiat.model.football;
+
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
+
+/**
+ * 
+ * created by basquiat
+ *
+ */
+@Entity
+@Table(name = "player")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@ToString(exclude = { "footballClub", "locker" })
+public class Player {
+
+	@Builder
+	public Player(String name, int age, String position, Club footballClub, Locker locker) {
+		this.name = name;
+		this.age = age;
+		this.position = position;
+		this.footballClub = footballClub;
+		this.locker = locker;
+		locker.matchingPlayer(this);
+	}
+
+	/** 선수 아이디 */
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+	
+	/** 선수 명 */
+	private String name;
+	
+	/** 선수 나이 */
+	@Setter
+	private int age;
+
+	/** 선수 포지션 */
+	private String position;
+	
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "club_id")
+	private Club footballClub;
+	
+	@OneToOne(fetch = FetchType.LAZY, orphanRemoval = true)
+	@JoinColumn(name = "locker_id")
+	private Locker locker;
+
+	/** 클럽에 소속되다 */
+	public void entryClub(Club club) {
+		this.footballClub = club;
+	}
+}
+```
+이렇게 설정하고 다시 코드를 실행하면     
+
+```
+Hibernate: 
+    select
+        club0_.id as id1_0_0_,
+        club0_.name as name2_0_0_,
+        club0_.ranking as ranking3_0_0_ 
+    from
+        club club0_ 
+    where
+        club0_.id=?
+Hibernate: 
+    select
+        players0_.club_id as club_id5_2_0_,
+        players0_.id as id1_2_0_,
+        players0_.id as id1_2_1_,
+        players0_.age as age2_2_1_,
+        players0_.club_id as club_id5_2_1_,
+        players0_.locker_id as locker_i6_2_1_,
+        players0_.name as name3_2_1_,
+        players0_.position as position4_2_1_ 
+    from
+        player players0_ 
+    where
+        players0_.club_id=?
+Hibernate: 
+    select
+        locker0_.id as id1_1_0_,
+        locker0_.name as name2_1_0_,
+        locker0_.position as position3_1_0_ 
+    from
+        locker locker0_ 
+    where
+        locker0_.id=?
+Hibernate: 
+    select
+        locker0_.id as id1_1_0_,
+        locker0_.name as name2_1_0_,
+        locker0_.position as position3_1_0_ 
+    from
+        locker locker0_ 
+    where
+        locker0_.id=?
+Hibernate: 
+    /* delete io.basquiat.model.football.Player */ delete 
+        from
+            player 
+        where
+            id=?
+Hibernate: 
+    /* delete io.basquiat.model.football.Locker */ delete 
+        from
+            locker 
+        where
+            id=?
+Hibernate: 
+    /* delete io.basquiat.model.football.Player */ delete 
+        from
+            player 
+        where
+            id=?
+Hibernate: 
+    /* delete io.basquiat.model.football.Locker */ delete 
+        from
+            locker 
+        where
+            id=?
+Hibernate: 
+    /* delete io.basquiat.model.football.Club */ delete 
+        from
+            club 
+        where
+            id=?
+```
+locker도 같이 지워진다.     
+
+근데 orphanRemoval을 사용할 때는 다음과 같이 주의를 해야 한다. 
+
+1. 참조하는 곳이 하나일 때 사용해야한다. 이것은 cascade와 비슷하다.     
+
+2. 특정 엔티티가 개인 소유할 때 사용한다. 1번과 일맥상통한 내용이다.     
+
+3. @OneToOne, @OneToMany만 가능하다. 이것은 IDE에서 테스트해보면 이 경우에만 사용할 수 있는것을 알 수 있다.    
+
+그런데 orphanRemoval은 이렇게 단독으로 사용할 수 있지만 CASCADE와 함께 사용할 경우 몇가지 특징이 추가 된다.     
+
+1. 두 옵션을 모두 활성화 하면 부모 엔티티를 통해서 자식의 생명주기를 관리할 수 있다.     
+
+2. 도메인 주도 설계(DDD)의 Aggregate Root개념을 구현할 때 유용하다.      
+
+그럼 첫 번째 사항부터 살펴보자.      
+
+일단 지금까지 각 엔티티에 설정한 cascade와 orphanRemoval설정을 지워보자.     
+
+그리고 다음과 같은 시나리오를 설정해 보자.     
+
+```
+클럽에서 선수 한명이 이적을 했다.
 ```
 
-이렇게 해서 단순하게 필드만 상속하는 @MappedSuperclass도 알아보았다.    
+그렇다면 코드로 대충 구현을 해보면     
+
+```
+Locker sonsLocker = Locker.builder().name("손흥민의 락커")
+												.position("입구에서 4번째 위치")
+												.build();
+
+Player son = Player.builder().name("손흥민")
+							 .age(27)
+							 .position("Striker")
+							 .locker(sonsLocker)
+							 .build();
+
+Locker hugoLocker = Locker.builder().name("위고 요리스의 락커")
+									.position("입구에서 1번째 위치")
+									.build();
+		        	
+Player hugo = Player.builder().name("Hugo Hadrien Dominique Lloris")
+							 .age(33)
+							 .position("Goal Keeper")
+							 .locker(hugoLocker)
+							 .build();
+
+Club tottenhamFootballClub = Club.builder().name("Tottenham Hotspur Football Club")
+										   .ranking(9)
+										   .build();
+tottenhamFootballClub.scoutPlayer(hugo);
+tottenhamFootballClub.scoutPlayer(son);
+em.persist(hugo);
+em.persist(son);
+em.persist(hugoLocker);
+em.persist(sonsLocker);
+em.persist(tottenhamFootballClub);
+em.flush();
+em.clear();
+
+Club selected = em.find(Club.class, 1L);
+Player transferPlayer = selected.getPlayers().get(0);
+System.out.println("이적했으니 클럽 선수 명단에서 지운다.");
+em.remove(transferPlayer);
+Locker removeLocker = transferPlayer.getLocker();
+em.remove(removeLocker);
+
+result 
+
+Hibernate: 
+    select
+        club0_.id as id1_0_0_,
+        club0_.name as name2_0_0_,
+        club0_.ranking as ranking3_0_0_ 
+    from
+        club club0_ 
+    where
+        club0_.id=?
+Hibernate: 
+    select
+        players0_.club_id as club_id5_2_0_,
+        players0_.id as id1_2_0_,
+        players0_.id as id1_2_1_,
+        players0_.age as age2_2_1_,
+        players0_.club_id as club_id5_2_1_,
+        players0_.locker_id as locker_i6_2_1_,
+        players0_.name as name3_2_1_,
+        players0_.position as position4_2_1_ 
+    from
+        player players0_ 
+    where
+        players0_.club_id=?
+이적했으니 클럽 선수 명단에서 지운다.
+Hibernate: 
+    select
+        locker0_.id as id1_1_0_,
+        locker0_.name as name2_1_0_,
+        locker0_.position as position3_1_0_ 
+    from
+        locker locker0_ 
+    where
+        locker0_.id=?
+Hibernate: 
+    /* delete io.basquiat.model.football.Player */ delete 
+        from
+            player 
+        where
+            id=?
+Hibernate: 
+    /* delete io.basquiat.model.football.Locker */ delete 
+        from
+            locker 
+        where
+            id=?
+```
+이린 식의 코드를 구현해 볼 수 있다.     
+
+근데 
+
+```
+1. 두 옵션을 모두 활성화 하면 부모 엔티티를 통해서 자식의 생명주기를 관리할 수 있다.     
+```
+
+이 이야기가 무슨 말인가?      
+
+club과 player에 다음과 같이 한번 설정을 해보자.    
+
+Club
+
+```
+package io.basquiat.model.football;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.persistence.CascadeType;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.OneToMany;
+import javax.persistence.Table;
+
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+
+/**
+ * 
+ * created by basquiat
+ *
+ */
+@Entity
+@Table(name = "club")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@ToString(exclude = "players")
+public class Club {
+
+	@Builder
+	public Club(String name, int ranking) {
+		this.name = name;
+		this.ranking = ranking;
+	}
+
+	/** 클럽 아이디 */
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+	
+	/** 클럽 명 */
+	private String name;
+	
+	/** 클럽 랭킹 순위 */
+	private int ranking;
+	
+	@OneToMany(mappedBy = "footballClub", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<Player> players = new ArrayList<>();
+	
+	/** 선수를 영입하다 */
+	public void scoutPlayer(Player player) {
+		player.entryClub(this);
+		this.getPlayers().add(player);
+	}
+}
+```
+
+Player
+
+```
+package io.basquiat.model.football;
+
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
+
+/**
+ * 
+ * created by basquiat
+ *
+ */
+@Entity
+@Table(name = "player")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@ToString(exclude = { "footballClub", "locker" })
+public class Player {
+
+	@Builder
+	public Player(String name, int age, String position, Club footballClub, Locker locker) {
+		this.name = name;
+		this.age = age;
+		this.position = position;
+		this.footballClub = footballClub;
+		this.locker = locker;
+		locker.matchingPlayer(this);
+	}
+
+	/** 선수 아이디 */
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+	
+	/** 선수 명 */
+	private String name;
+	
+	/** 선수 나이 */
+	@Setter
+	private int age;
+
+	/** 선수 포지션 */
+	private String position;
+	
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "club_id")
+	private Club footballClub;
+	
+	@OneToOne(fetch = FetchType.LAZY, orphanRemoval = true)
+	@JoinColumn(name = "locker_id")
+	private Locker locker;
+
+	/** 클럽에 소속되다 */
+	public void entryClub(Club club) {
+		this.footballClub = club;
+	}
+}
+```
+
+그럼 코드로는 어떻게 구현해 볼 수 있을까?     
+
+```
+Locker sonsLocker = Locker.builder().name("손흥민의 락커")
+												.position("입구에서 4번째 위치")
+												.build();
+
+Player son = Player.builder().name("손흥민")
+							 .age(27)
+							 .position("Striker")
+							 .locker(sonsLocker)
+							 .build();
+
+Locker hugoLocker = Locker.builder().name("위고 요리스의 락커")
+									.position("입구에서 1번째 위치")
+									.build();
+		        	
+Player hugo = Player.builder().name("Hugo Hadrien Dominique Lloris")
+							 .age(33)
+							 .position("Goal Keeper")
+							 .locker(hugoLocker)
+							 .build();
+
+Club tottenhamFootballClub = Club.builder().name("Tottenham Hotspur Football Club")
+										   .ranking(9)
+										   .build();
+tottenhamFootballClub.scoutPlayer(hugo);
+tottenhamFootballClub.scoutPlayer(son);
+em.persist(hugo);
+em.persist(son);
+em.persist(hugoLocker);
+em.persist(sonsLocker);
+em.persist(tottenhamFootballClub);
+em.flush();
+em.clear();
+
+Club selected = em.find(Club.class, 1L);
+System.out.println("이적했으니 클럽 선수 명단에서 지운다.");
+selected.getPlayers().remove(0); // 리스트에서 첫 번째 인덱스를 지운다.
+tx.commit();
+```
+코드를 보면 그냥 Club에서 선수 명단을 가져오고 첫 번째 인덱스를 지우는 행위를 했다.     
+
+하지만 결과는?
+
+```
+Hibernate: 
+    select
+        club0_.id as id1_0_0_,
+        club0_.name as name2_0_0_,
+        club0_.ranking as ranking3_0_0_ 
+    from
+        club club0_ 
+    where
+        club0_.id=?
+이적했으니 클럽 선수 명단에서 지운다.
+Hibernate: 
+    select
+        players0_.club_id as club_id5_2_0_,
+        players0_.id as id1_2_0_,
+        players0_.id as id1_2_1_,
+        players0_.age as age2_2_1_,
+        players0_.club_id as club_id5_2_1_,
+        players0_.locker_id as locker_i6_2_1_,
+        players0_.name as name3_2_1_,
+        players0_.position as position4_2_1_ 
+    from
+        player players0_ 
+    where
+        players0_.club_id=?
+Hibernate: 
+    select
+        locker0_.id as id1_1_0_,
+        locker0_.name as name2_1_0_,
+        locker0_.position as position3_1_0_ 
+    from
+        locker locker0_ 
+    where
+        locker0_.id=?
+Hibernate: 
+    /* delete io.basquiat.model.football.Player */ delete 
+        from
+            player 
+        where
+            id=?
+Hibernate: 
+    /* delete io.basquiat.model.football.Locker */ delete 
+        from
+            locker 
+        where
+            id=?
+```
+어라? 그와 관련된 locker와 player를 지우는 쿼리가 날아간다.     
+
+실제로 쿼리를 날려서 조회해 봐도 알 수 있다.      
+
+즉 부모 엔티티에서 자식들의 생명주기를 관리하는 것이 보인다.      
+
+그럼 두 번째 항목은 어떤 이야기일까? 이미 위에서 경험한 것이다.     
+
+[Aggregate Root개념](https://medium.com/@SlackBeck/%EC%95%A0%EA%B7%B8%EB%A6%AC%EA%B2%8C%EC%9E%87-%ED%95%98%EB%82%98%EC%97%90-%EB%A6%AC%ED%8C%8C%EC%A7%80%ED%86%A0%EB%A6%AC-%ED%95%98%EB%82%98-f97a69662f63)    
+
+위 글에 대한 이야기라면 우리는 테이블의 관계와 엔티티들의 연관관계에 대해서 잘 알아야 한다.      
+
+# At A Glance     
+
+지금까지 프록시, 결국 지연로딩, 즉시 로딩에 대한 개념과 영속성 전이에 대해서 알아 봤다.     
+
+여기서 영속성 전이의 경우에는 주의를 요하는 옵션이다. 따라서 잘 된 설계위에서 위에서 언급했던 상황들을 고려하고 적용해야 한다.     
+
+연습도 많이 필요하고 나의 경우에도 지금까지 JPA를 하면서 굉장히 많이 사용한 옵션도 아니였기 때문에 많은 테스트 케이스를 고려하고 사용했던 경험이 있다.     
+
+다시 그것을 상기하려고 테스트를 이것저것 했더니 나 자신도 좀 정리가 살짝 안되긴 하지만 그래도 끊임없이 상상하고 테스트를 하게 되는 것 같다.     
