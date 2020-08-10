@@ -5,9 +5,9 @@ import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
 import javax.persistence.Persistence;
 
-import io.basquiat.model.football.Club;
-import io.basquiat.model.football.Locker;
-import io.basquiat.model.football.Player;
+import io.basquiat.model.embedded.Address;
+import io.basquiat.model.embedded.DeliveryAddress;
+import io.basquiat.model.embedded.Member;
 
 /**
  * 
@@ -23,42 +23,49 @@ public class jpaMain {
         tx.begin();
         try {
         	
-        	Locker sonsLocker = Locker.builder().name("손흥민의 락커")
-												.position("입구에서 4번째 위치")
-												.build();
-
-        	Player son = Player.builder().name("손흥민")
-										 .age(27)
-										 .position("Striker")
-										 .locker(sonsLocker)
-										 .build();
+        	// 1. embedded address 생성
+        	Address address = Address.builder().city("서울시")
+        									   .street("논현동")
+        									   .zipcode("50000")
+        									   .build();
         	
-        	Locker hugoLocker = Locker.builder().name("위고 요리스의 락커")
-												.position("입구에서 1번째 위치")
-												.build();
-					        	
-			Player hugo = Player.builder().name("Hugo Hadrien Dominique Lloris")
-										 .age(33)
-										 .position("Goal Keeper")
-										 .locker(hugoLocker)
-										 .build();
-			
-			Club tottenhamFootballClub = Club.builder().name("Tottenham Hotspur Football Club")
-													   .ranking(9)
-													   .build();
-        	tottenhamFootballClub.scoutPlayer(hugo);
-        	tottenhamFootballClub.scoutPlayer(son);
-        	em.persist(hugo);
-        	em.persist(son);
-        	em.persist(hugoLocker);
-        	em.persist(sonsLocker);
-			em.persist(tottenhamFootballClub);
+        	// 2. delivery address
+        	DeliveryAddress myHomeAddress = DeliveryAddress.builder().city("서울시")
+																   	 .street("논현동 우리집")
+																   	 .zipcode("50000")
+																   	 .build();
+        	
+        	DeliveryAddress myOfficialAddress = DeliveryAddress.builder().city("서울시")
+																	   	 .street("논현동 회사")
+																	   	 .zipcode("50000")
+																	   	 .build();
+        	
+        	// 신규가입자 
+        	Member newMember = Member.builder().id("basquiat")
+    										   .password("mypassword")
+    										   .name("Jean-Michel-Basquiat")
+    										   .birth("1960-12-22")
+    										   .phone("010-0000-00000")
+    										   .address(address)
+    										   .build();
+        	
+        	newMember.getDeliveryAddress().add(myHomeAddress);
+        	newMember.getDeliveryAddress().add(myOfficialAddress);
+        	
+        	newMember.getFavoriteCoffeeShop().add("별다방");
+        	newMember.getFavoriteCoffeeShop().add("커피 자판기 일명 벽다방");
+        	newMember.getFavoriteCoffeeShop().add("커피콩");
+        	
+        	em.persist(newMember);
+        	
         	em.flush();
         	em.clear();
         	
-        	Club selected = em.find(Club.class, 1L);
-        	System.out.println("이적했으니 클럽 선수 명단에서 지운다.");
-        	selected.getPlayers().remove(0); // 리스트에서 첫 번째 인덱스를 지운다.
+        	Member selectedMember = em.find(Member.class, newMember.getId());
+        	DeliveryAddress updateAddress = selectedMember.getDeliveryAddress().get(0);
+        	updateAddress.setStreet("논현동 우리집 !!!!!!");
+        	selectedMember.getDeliveryAddress().remove(1);
+        	
         	tx.commit();
         } catch(Exception e) {
         	e.printStackTrace();

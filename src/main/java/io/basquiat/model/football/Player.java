@@ -22,7 +22,7 @@ import lombok.ToString;
  * created by basquiat
  *
  */
-@Entity
+//@Entity
 @Table(name = "player")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

@@ -19,7 +19,7 @@ import lombok.ToString;
  * created by basquiat
  *
  */
-@Entity
+//@Entity
 @Table(name = "locker")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
