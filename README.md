@@ -71,3 +71,5 @@ JPA를 처음 접하시는 분들에게는 그래도 어느정도 도움이 되�
 
 [값 타입](https://github.com/basquiat78/completedJPA/tree/10.value-type)     
 
+[JPQL Part I: 기본적인 SELECT Clause](https://github.com/basquiat78/completedJPA/tree/11.jpql-part-i)
+
