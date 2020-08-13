@@ -15,7 +15,7 @@ import lombok.Setter;
 import lombok.ToString;
 
 
-@Entity
+//@Entity
 @Table(name = "delivery_address")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

@@ -23,7 +23,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
-@Entity(name = "embedded_member")
+//@Entity(name = "embedded_member")
 @Table(name = "member")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

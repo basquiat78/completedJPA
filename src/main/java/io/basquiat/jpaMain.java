@@ -4,10 +4,10 @@ import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
 import javax.persistence.Persistence;
+import javax.persistence.TypedQuery;
 
-import io.basquiat.model.embedded.Address;
-import io.basquiat.model.embedded.DeliveryAddress;
-import io.basquiat.model.embedded.Member;
+import io.basquiat.jpql.Member;
+import io.basquiat.jpql.Team;
 
 /**
  * 
@@ -22,50 +22,24 @@ public class jpaMain {
         EntityTransaction tx = em.getTransaction();
         tx.begin();
         try {
+        	Team myTeam = Team.builder().teamName("Default Team").build();
+        	em.persist(myTeam);
         	
-        	// 1. embedded address 생성
-        	Address address = Address.builder().city("서울시")
-        									   .street("논현동")
-        									   .zipcode("50000")
-        									   .build();
-        	
-        	// 2. delivery address
-        	DeliveryAddress myHomeAddress = DeliveryAddress.builder().city("서울시")
-																   	 .street("논현동 우리집")
-																   	 .zipcode("50000")
-																   	 .build();
-        	
-        	DeliveryAddress myOfficialAddress = DeliveryAddress.builder().city("서울시")
-																	   	 .street("논현동 회사")
-																	   	 .zipcode("50000")
-																	   	 .build();
-        	
-        	// 신규가입자 
-        	Member newMember = Member.builder().id("basquiat")
-    										   .password("mypassword")
-    										   .name("Jean-Michel-Basquiat")
-    										   .birth("1960-12-22")
-    										   .phone("010-0000-00000")
-    										   .address(address)
-    										   .build();
-        	
-        	newMember.getDeliveryAddress().add(myHomeAddress);
-        	newMember.getDeliveryAddress().add(myOfficialAddress);
-        	
-        	newMember.getFavoriteCoffeeShop().add("별다방");
-        	newMember.getFavoriteCoffeeShop().add("커피 자판기 일명 벽다방");
-        	newMember.getFavoriteCoffeeShop().add("커피콩");
-        	
-        	em.persist(newMember);
-        	
+        	// address는 그냥 비우자.
+        	Member member = Member.builder().id("basquiat")
+        									.name("Jean-Michel Basquiat")
+        									.age(28)
+        									.team(myTeam)
+        									.build();
+        	em.persist(member);
         	em.flush();
         	em.clear();
         	
-        	Member selectedMember = em.find(Member.class, newMember.getId());
-        	DeliveryAddress updateAddress = selectedMember.getDeliveryAddress().get(0);
-        	updateAddress.setStreet("논현동 우리집 !!!!!!");
-        	selectedMember.getDeliveryAddress().remove(1);
-        	
+        	TypedQuery<Team> selected = em.createQuery("SELECT m.team FROM Member m", Team.class);
+        	Team selectedTeam = selected.getSingleResult();
+        	selectedTeam.setTeamName("Basquiat Team");
+        	System.out.println(selectedTeam);
+			
         	tx.commit();
         } catch(Exception e) {
         	e.printStackTrace();

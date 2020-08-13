@@ -1,41 +1,78 @@
-# 값 타입
+# Java Persistence Query Language
 
+일명 JPQL이라고 한다.      
+
+JPQL에는 몇 가지 특징이 있는데     
+
+1. 테이블이 아닌 객체를 검색하는 객체지향 쿼리다. 
+
+2. SQL을 추상화 했기 때문에 특정 벤더에 종속적이지 않다.     
+
+3. JPA는 JPQL을 분석하여 SQL을 생성한 후 DB에서 조회한다. 이 말인 즉 결국 SQL로 변환한다.
+
+이제부터 하나씩 알아가 보자.      
 
 ## 일단 시작하기 전에   
+기본적으로 JPQL은 일반적인 SQL문과 상당히 유사하다. 거의 같다고 보면 되는데 단지 위에서 언급한 1번 특징을 가지고 있다.      
 
-값 타입과 관련한 내용을 쭉 살펴보면 중요한 부분은 2가지이다.     
+어째든 기본적인 SQL문법에 대해서 어느 정도 지식이 필요하다.      
 
-1. Embedded Type    
+여기서는 그런 기본적인 문법을 알고 있다는 가정하에 진행할 생각이다.      
 
-2. Collection Value Type
+그리고 책에서는 Criteria, queryDSL, 네이티브 SQL, JDBC를 직접 사용하는 방법등을 소개하고 있는데 여기서는 다 제껴두겠다.      
 
-그 외에는 사실 자바의 기본적인 이론과 깊은 관련이 있다.       
+Criteria는 뭐... queryDSL로 대체가능하다.       
 
-Call By Reference vs. Call By Value와 관련된 내용들이기 때문에 이 부분은 그냥 링크로 대체한다.      
+현재 queryDSL은 따로 진행해서 완료한 상태이기 떄문에 그 부분을 참조하면 될거 같고 SpringJDBCTemaplate이나 myBatis와의 연계는 또 따로 진행할 예정이기 때문이다.      
 
-[Call By Reference vs. Call By Value](https://velog.io/@codemcd/Call-By-Value-VS-Call-By-Reference)
+책을 기준으로 하고 있지만 후반부 고급에 속한 내용들은 일단 제외한다.     
 
-primitive type과 객체의 특성을 잘 파악하면 된다.
+결국 Spring Framework, 정확히는 SpringBoot와의 연계는 위에 언급한 대로 따로 진행할 생각이다.
 
-## 이렇게도 생각해 볼 수 있지 않을까?    
+어쨰든 가장 중요한 것은 JPQL이 아닌가 생각하기 때문이고 여기에 더 초점을 맞추고 진행한다.      
 
-만일 Member, 즉 고객의 정보를 담는 테이블에는 보통 고객의 주소가 기입된다.      
+## Intro     
+지금까지 쭉 테스트를 진행하면서 저장, 수정, 삭제같은 경우는 상당히 심플하다.      
 
-지금까지 테스트하면서 그냥 전체적인 주소를 하나의 테이블에 담기 위해 String으로 받았다.       
+하지만 실제 업무에서는 가장 많은 부분을 차지하는 것인 조회부분이다.      
 
-하지만 이런 부분도 생각해 봐야 한다.     
+오죽하면 DB를 레플리카로 운영해서 Writer, Reader로 분리할까?      
 
-만일 어느 지역을 중심으로 어떤 제품이 많이 팔렸는지 마케팅 측면에서 분석해야 할 경우 지금의 구조로는 할 수 가 없다.      
+실제로 통계상 8:2라고 하는데 생각해 보면 인터넷을 통해 우리가 행하는 대부분의 액션은 거의 검색이라는 것을 알 수 있다.      
 
-물론 여기서는 그런 분석은 던져버리고 주소를 좀 세부적으로 나누는 작업을 해볼려고 한다.    
+예를 들면 웹쇼핑을 하더라도 여러분들은 대부분 상품 조회를 하는데 많은 시간을 할애하지 주문에는 많은 시간을 소비하지 않는다.       
 
-직구를 하다 보면 외국 주소 체계는 보통 country, state/province, street, postal code이런 식인데 그냥 다음가 같이 간단하게 작성을 해 보자.
+결국에 주문하고 구입하는 시간은 진짜 몇 초에 불과하다는 것을 이미 알고 있다.      
+
+그만큼 조회라는 부분은 대부분의 업무에서도 큰 비중을 차지한다.     
+
+지금까지 테스트는 그냥 단순하게 엔티티를 중심으로    
+
+```
+em.find(Entityt.class, pk);
+```
+요런 식의 테스트만 진행했지만 다양한 조건을 통해서 원하는 정보를 조회하는게 중요하다.     
+
+그래서 기본적으로 위에서 언급했던 SQL의 기본적인 개념은 알고 있어야 한다.      
+
+이런 모든 것을 기본적으로 가져가야 한다. 항상 언급하는 것이지만 JPA는 만능이 아니다.     
+
+결국 RDBMS위에 서있는 기술이기 때문이다.
+
+
+## Basic JPQL
+
+위에서처럼 간단한 기능의 조회로만 테스트를 해왔는데 이제부터 기본적인 문법을 하나씩 알아가 보고자 한다.
+
+jpql이라는 패키지에 Member라는 클래스를 하나 만들어 볼 것이다. 그래서 기존에 테스트했던 엔티티들은 어노테이션을 주석처리하고 시작한다.
+
 
 Member
 
 ```
-package io.basquiat.model.embedded;
+package io.basquiat.jpql;
 
+import javax.persistence.Embedded;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Table;
@@ -44,1210 +81,41 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
-@Entity(name = "embedded_member")
-@Table(name = "member")
+@Entity
+@Table(name = "basquiat_member")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@ToString
 public class Member {
-
+	
 	@Builder
-	public Member(String id, String password, String name, String birth, String phone, String city, String street,
-			String zipcode) {
+	public Member(String id, String name, int age, Address address) {
 		super();
 		this.id = id;
-		this.password = password;
 		this.name = name;
-		this.birth = birth;
-		this.phone = phone;
-		this.city = city;
-		this.street = street;
-		this.zipcode = zipcode;
+		this.age = age;
+		this.address = address;
 	}
 
-	/** 사용자 아이디 */
 	@Id
 	private String id;
-
-	/** 사용자 비번 */
-	private String password;
 	
-	/** 사용자 이름 */
 	private String name;
 	
-	/** 사용자 생년월일 */
-	private String birth;
-	
-	/** 사용자 전번 */
-	private String phone;
-	
-	/** 시 */
-	private String city;
-	
-	/** 동 */
-	private String street;
-	
-	/** 우편 번호 */
-	private String zipcode;
-	
-	
+	private int age;
+
+	@Embedded
+	private Address address;
+
 }
 ```
-그런데 Delivery의 경우에는 또 어떤가? 또는 주문서에도 배송할 주소 정보가 있다.     
-
-그러면 고민이 될것이다.     
-
-'그냥 copy&paste로 붙이지 뭐...'       
-
-하지만 이런 경우 변경에 대해 닫혀있게 된다. 하나가 바뀌면 어떻게 해야돼?      
-
-변경된 내용을 해당 복붙복하나 모든 엔티티를 다 찾아서 변경해야 한다.      
-
-물론 몇개 안되면 좋은 선택일 수 있지만 그렇게 되면 생각치 못한 휴먼에러를 100프로 피할 수 없다.   
-
-Delivery
-
-```
-package io.basquiat.model.embedded;
-
-import javax.persistence.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.Table;
-
-import io.basquiat.model.item.DeliveryStatus;
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-
-@Entity(name = "embedded_delivery")
-@Table(name = "delivery")
-@Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Delivery {
-
-	@Builder
-	public Delivery(String courier, DeliveryStatus status, String city, String street, String zipcode) {
-		super();
-		this.courier = courier;
-		this.status = status;
-		this.city = city;
-		this.street = street;
-		this.zipcode = zipcode;
-	}
-	
-	/** 배송 번호 생성 */
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
-
-
-	/** 택배사 코드 */
-	private String courier;
-	
-	/** 배송 상태 */
-	@Enumerated(EnumType.STRING)
-	private DeliveryStatus status;
-	
-	/** 시 */
-	private String city;
-	
-	/** 동 */
-	private String street;
-	
-	/** 우편 번호 */
-	private String zipcode;
-	
-}
-```
-이렇게 바꿔야 겠지...
-
-## 그럼 어떻게 해야하는데? 방법을 알려주고 말을 해!     
-
-그래서 JPA에서는 @Embeddable과 @Embedded을 지원한다.      
-
-그냥 뜻으로 해석하면 내장가능한, 내장된 이라고 해석할 수 있는데 이렇게 보면 이 어노테이션이 어디에 사용될지 머리 속에 들어온다.     
-
-어떤 공통된 프로퍼티들을 모아놓은 POJO타입의 객체를 하나 만들 것이다.     
-
 
 Address
 
 ```
-package io.basquiat.model.embedded;
-
-import javax.persistence.Column;
-import javax.persistence.Embeddable;
-
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.ToString;
-
-@Getter
-@Setter
-@NoArgsConstructor
-@Embeddable
-@ToString
-public class Address {
-
-	@Builder
-	public Address(String city, String street, String zipcode) {
-		super();
-		this.city = city;
-		this.street = street;
-		this.zipcode = zipcode;
-	}
-
-	/** 시 */
-	@Column(name = "member_city")
-	private String city;
-	
-	/** 동 */
-	@Column(name = "member_street")
-	private String street;
-	
-	/** 우편 번호 */
-	@Column(name = "member_zipcode")
-	private String zipcode;
-
-	/** 전체 주소 가져오 */
-	public String totalAddress() {
-		return city + " " + street + ", " + zipcode;
-	}
-	
-}
-```
-이렇게 @Embeddable를 붙여주면 된다. 객체로 작성하기 때문에 프로퍼티가 테이블의 컬럼으로 나갈 것이다.     
-
-또한 결국 하나의 엔티티에 내장될 객체이기 때문에 컬럼명 역시 @Column을 통해서 정의할 수 있다.
-
-하지만 우리는 필요하면 위와 같이 기능을 제공하는 함수를 작성할 수 있다.      
-
-주의할 점은 기본 생성자는 필수이다. 또한 이것은 엔티티가 아니다.     
-
-자 그럼 이제는 Delivery, Member 객체도 변경해 주면 된다.
-
-Delivery
-
-```
-package io.basquiat.model.embedded;
-
-import javax.persistence.Embedded;
-import javax.persistence.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.Table;
-
-import io.basquiat.model.item.DeliveryStatus;
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
-
-@Entity(name = "embedded_delivery")
-@Table(name = "delivery")
-@Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@ToString
-public class Delivery {
-
-	@Builder
-	public Delivery(Long id, String courier, DeliveryStatus status, Address address) {
-		super();
-		this.id = id;
-		this.courier = courier;
-		this.status = status;
-		this.address = address;
-	}
-	
-	/** 배송 번호 생성 */
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
-
-
-	/** 택배사 코드 */
-	private String courier;
-	
-	/** 배송 상태 */
-	@Enumerated(EnumType.STRING)
-	private DeliveryStatus status;
-	
-	/** 배송지 주소 */
-	@Embedded
-	private Address address;
-	
-}
-```
-
-Member
-
-```
-package io.basquiat.model.embedded;
-
-import javax.persistence.Embedded;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Table;
-
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
-
-@Entity(name = "embedded_member")
-@Table(name = "member")
-@Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@ToString
-public class Member {
-
-	@Builder
-	public Member(String id, String password, String name, String birth, String phone, Address address) {
-		super();
-		this.id = id;
-		this.password = password;
-		this.name = name;
-		this.birth = birth;
-		this.phone = phone;
-		this.address = address;
-	}
-
-	/** 사용자 아이디 */
-	@Id
-	private String id;
-
-	/** 사용자 비번 */
-	private String password;
-	
-	/** 사용자 이름 */
-	private String name;
-	
-	/** 사용자 생년월일 */
-	private String birth;
-	
-	/** 사용자 전번 */
-	private String phone;
-	
-	/** 사용자 주소 */
-	@Embedded
-	private Address address;
-	
-}
-```
-그럼 일단 테이블 생성이 어떻게 되는지 먼저 확인해 보자.
-
-```
-package io.basquiat;
-
-import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
-import javax.persistence.EntityTransaction;
-import javax.persistence.Persistence;
-
-/**
- * 
- * created by basquiat
- *
- */
-public class jpaMain {
-
-    public static void main(String[] args) {
-        EntityManagerFactory emf = Persistence.createEntityManagerFactory("basquiat");
-        EntityManager em = emf.createEntityManager();
-        EntityTransaction tx = em.getTransaction();
-        tx.begin();
-        try {
-        	
-        	tx.commit();
-        } catch(Exception e) {
-        	e.printStackTrace();
-            tx.rollback();
-        } finally {
-            em.close();
-        }
-        emf.close();
-    }
-    
-}
-
-result grid
-
-Hibernate: 
-    
-    drop table if exists delivery
-Hibernate: 
-    
-    drop table if exists member
-Hibernate: 
-    
-    create table delivery (
-       id bigint not null auto_increment,
-        member_city varchar(255),
-        member_street varchar(255),
-        member_zipcode varchar(255),
-        courier varchar(255),
-        status varchar(255),
-        primary key (id)
-    ) engine=InnoDB
-Hibernate: 
-    
-    create table member (
-       id varchar(255) not null,
-        member_city varchar(255),
-        member_street varchar(255),
-        member_zipcode varchar(255),
-        birth varchar(255),
-        name varchar(255),
-        password varchar(255),
-        phone varchar(255),
-        primary key (id)
-    ) engine=InnoDB
-```
-예상대로 잘 생성된 것을 볼 수 있다.
-
-그럼 실제로 어떻게 저장하고 가져오는지 확인해 볼 시간이다.
-
-```
-// 1.address 생성
-Address address = Address.builder().city("서울시")
-								   .street("논현동")
-								   .zipcode("50000")
-								   .build();
-
-// 신규가입자 
-Member newMember = Member.builder().id("basquiat")
-									.password("mypassword")
-									.name("Jean-Michel-Basquiat")
-									.birth("1960-12-22")
-									.phone("010-0000-00000")
-									.address(address)
-									.build();
-em.persist(newMember);
-
-Delivery delivery = Delivery.builder().courier("CJ택배")
-									 .status(DeliveryStatus.READY)
-									 .address(address)
-									 .build();
-em.persist(delivery);
-em.flush();
-em.clear();
-
-Member selectedMember = em.find(Member.class, newMember.getId());
-System.out.println(selectedMember.toString());
-
-Delivery selectedDelivery = em.find(Delivery.class, delivery.getId());
-System.out.println(selectedDelivery.toString());
-
-System.out.println(selectedMember.getAddress().totalAddress());
-System.out.println(selectedDelivery.getAddress().totalAddress());
-
-result grid
-
-Hibernate: 
-    /* insert io.basquiat.model.embedded.Member
-        */ insert 
-        into
-            member
-            (member_city, member_street, member_zipcode, birth, name, password, phone, id) 
-        values
-            (?, ?, ?, ?, ?, ?, ?, ?)
-Hibernate: 
-    /* insert io.basquiat.model.embedded.Delivery
-        */ insert 
-        into
-            delivery
-            (member_city, member_street, member_zipcode, courier, status) 
-        values
-            (?, ?, ?, ?, ?)
-Hibernate: 
-    select
-        member0_.id as id1_1_0_,
-        member0_.member_city as member_c2_1_0_,
-        member0_.member_street as member_s3_1_0_,
-        member0_.member_zipcode as member_z4_1_0_,
-        member0_.birth as birth5_1_0_,
-        member0_.name as name6_1_0_,
-        member0_.password as password7_1_0_,
-        member0_.phone as phone8_1_0_ 
-    from
-        member member0_ 
-    where
-        member0_.id=?
-Member(id=basquiat, password=mypassword, name=Jean-Michel-Basquiat, birth=1960-12-22, phone=010-0000-00000, address=Address(city=서울시, street=논현동, zipcode=50000))
-Hibernate: 
-    select
-        delivery0_.id as id1_0_0_,
-        delivery0_.member_city as member_c2_0_0_,
-        delivery0_.member_street as member_s3_0_0_,
-        delivery0_.member_zipcode as member_z4_0_0_,
-        delivery0_.courier as courier5_0_0_,
-        delivery0_.status as status6_0_0_ 
-    from
-        delivery delivery0_ 
-    where
-        delivery0_.id=?
-Delivery(id=1, courier=CJ택배, status=READY, address=Address(city=서울시, street=논현동, zipcode=50000))
-서울시 논현동, 500001
-서울시 논현동, 500001
-```
-원하는 정보가 나왔다.      
-
-하지만 이 코드는 약간 문제가 있다. 불변 객체에 대한 이야기가 나오는데 그럼 다음과 같이 코드를 수정해서 테스트 하면 어떤 일이 벌어질까?
-
-```
-// 1.address 생성
-Address address = Address.builder().city("서울시")
-								   .street("논현동")
-								   .zipcode("50000")
-								   .build();
-
-// 신규가입자 
-Member newMember = Member.builder().id("basquiat")
-									.password("mypassword")
-									.name("Jean-Michel-Basquiat")
-									.birth("1960-12-22")
-									.phone("010-0000-00000")
-									.address(address)
-									.build();
-em.persist(newMember);
-
-Address deliveryAddress = address;
-// 배송지에 들어가는 zipcode는 500001로 수정하자
-deliveryAddress.setZipcode("500001");
-Delivery delivery = Delivery.builder().courier("CJ택배")
-									 .status(DeliveryStatus.READY)
-									 .address(deliveryAddress)
-									 .build();
-em.persist(delivery);
-em.flush();
-em.clear();
-
-Member selectedMember = em.find(Member.class, newMember.getId());
-System.out.println(selectedMember.toString());
-
-Delivery selectedDelivery = em.find(Delivery.class, delivery.getId());
-System.out.println(selectedDelivery.toString());
-
-System.out.println(selectedMember.getAddress().totalAddress());
-System.out.println(selectedDelivery.getAddress().totalAddress());
-```
-위 코드에서 처럼 중간에 배송지에 들어가는 주소는 위에서 생성한 주소를 그냥 복사한 것처럼 사용해서 수정해서 넣었다.     
-
-그러면 결과는 어떻게 될까? 원래 의도했던 것은 사용자의 주소의 zipcode는 50000이고 배송지에 들어가는 zipcode는 500001를 희망했을 것이다.      
-
-하지만 결과는 다음과 같다.
-
-```
-Hibernate: 
-    /* insert io.basquiat.model.embedded.Member
-        */ insert 
-        into
-            member
-            (member_city, member_street, member_zipcode, birth, name, password, phone, id) 
-        values
-            (?, ?, ?, ?, ?, ?, ?, ?)
-Hibernate: 
-    /* insert io.basquiat.model.embedded.Delivery
-        */ insert 
-        into
-            delivery
-            (member_city, member_street, member_zipcode, courier, status) 
-        values
-            (?, ?, ?, ?, ?)
-Hibernate: 
-    /* update
-        io.basquiat.model.embedded.Member */ update
-            member 
-        set
-            member_city=?,
-            member_street=?,
-            member_zipcode=?,
-            birth=?,
-            name=?,
-            password=?,
-            phone=? 
-        where
-            id=?
-Hibernate: 
-    select
-        member0_.id as id1_1_0_,
-        member0_.member_city as member_c2_1_0_,
-        member0_.member_street as member_s3_1_0_,
-        member0_.member_zipcode as member_z4_1_0_,
-        member0_.birth as birth5_1_0_,
-        member0_.name as name6_1_0_,
-        member0_.password as password7_1_0_,
-        member0_.phone as phone8_1_0_ 
-    from
-        member member0_ 
-    where
-        member0_.id=?
-Member(id=basquiat, password=mypassword, name=Jean-Michel-Basquiat, birth=1960-12-22, phone=010-0000-00000, address=Address(city=서울시, street=논현동, zipcode=500001))
-Hibernate: 
-    select
-        delivery0_.id as id1_0_0_,
-        delivery0_.member_city as member_c2_0_0_,
-        delivery0_.member_street as member_s3_0_0_,
-        delivery0_.member_zipcode as member_z4_0_0_,
-        delivery0_.courier as courier5_0_0_,
-        delivery0_.status as status6_0_0_ 
-    from
-        delivery delivery0_ 
-    where
-        delivery0_.id=?
-Delivery(id=1, courier=CJ택배, status=READY, address=Address(city=서울시, street=논현동, zipcode=500001))
-서울시 논현동, 500001
-서울시 논현동, 500001
-```
-어라? 사용자의 zipcode까지 바껴서 들어가 버렸다.     
-
-객체를 다룰 때 reference에 대한 개념을 이해해야만 한다.      
-
-이와 관련 테스트 코드가 있는데 [callbyvalue](https://github.com/basquiat78/call-by-value-vs-call-by-reference-)를 한번 살펴보기 바란다.      
-
-암튼 그래서 이것을 방지하기 위해서라도 불변객체로 바꾸는 것을 강제한다.      
-
-가장 기본적인 방법은 Setter를 없애고 기존의 객체를 복사하기 보다는 생성자를 이용하거나 빌드 패턴으로 새로운 객체를 생성해서 사용하는 것이다.      
-
-Address
-
-```
-package io.basquiat.model.embedded;
-
-import javax.persistence.Column;
-import javax.persistence.Embeddable;
-
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
-
-@Getter
-@NoArgsConstructor
-@Embeddable
-@ToString
-public class Address {
-
-	@Builder
-	public Address(String city, String street, String zipcode) {
-		super();
-		this.city = city;
-		this.street = street;
-		this.zipcode = zipcode;
-	}
-
-	/** 시 */
-	@Column(name = "member_city")
-	private String city;
-	
-	/** 동 */
-	@Column(name = "member_street")
-	private String street;
-	
-	/** 우편 번호 */
-	@Column(name = "member_zipcode")
-	private String zipcode;
-
-	/** 전체 주소 가져오 */
-	public String totalAddress() {
-		return city + " " + street + ", " + zipcode;
-	}
-	
-}
-```
-@Setter를 없애고 다음과 같이 코드를 수정해서 사용하는 것이다.
-
-```
-// 1.address 생성
-Address address = Address.builder().city("서울시")
-								   .street("논현동")
-								   .zipcode("50000")
-								   .build();
-
-// 신규가입자 
-Member newMember = Member.builder().id("basquiat")
-									.password("mypassword")
-									.name("Jean-Michel-Basquiat")
-									.birth("1960-12-22")
-									.phone("010-0000-00000")
-									.address(address)
-									.build();
-em.persist(newMember);
-
-Address deliveryAddress = Address.builder().city(address.getCity())
-										   .street(address.getStreet())
-										   .zipcode("500001")
-										   .build();
-Delivery delivery = Delivery.builder().courier("CJ택배")
-									 .status(DeliveryStatus.READY)
-									 .address(deliveryAddress)
-									 .build();
-em.persist(delivery);
-em.flush();
-em.clear();
-
-Member selectedMember = em.find(Member.class, newMember.getId());
-System.out.println(selectedMember.toString());
-
-Delivery selectedDelivery = em.find(Delivery.class, delivery.getId());
-System.out.println(selectedDelivery.toString());
-
-System.out.println(selectedMember.getAddress().totalAddress());
-System.out.println(selectedDelivery.getAddress().totalAddress());
-
-result grid
-
-Hibernate: 
-    /* insert io.basquiat.model.embedded.Member
-        */ insert 
-        into
-            member
-            (member_city, member_street, member_zipcode, birth, name, password, phone, id) 
-        values
-            (?, ?, ?, ?, ?, ?, ?, ?)
-Hibernate: 
-    /* insert io.basquiat.model.embedded.Delivery
-        */ insert 
-        into
-            delivery
-            (member_city, member_street, member_zipcode, courier, status) 
-        values
-            (?, ?, ?, ?, ?)
-Hibernate: 
-    select
-        member0_.id as id1_1_0_,
-        member0_.member_city as member_c2_1_0_,
-        member0_.member_street as member_s3_1_0_,
-        member0_.member_zipcode as member_z4_1_0_,
-        member0_.birth as birth5_1_0_,
-        member0_.name as name6_1_0_,
-        member0_.password as password7_1_0_,
-        member0_.phone as phone8_1_0_ 
-    from
-        member member0_ 
-    where
-        member0_.id=?
-Member(id=basquiat, password=mypassword, name=Jean-Michel-Basquiat, birth=1960-12-22, phone=010-0000-00000, address=Address(city=서울시, street=논현동, zipcode=50000))
-Hibernate: 
-    select
-        delivery0_.id as id1_0_0_,
-        delivery0_.member_city as member_c2_0_0_,
-        delivery0_.member_street as member_s3_0_0_,
-        delivery0_.member_zipcode as member_z4_0_0_,
-        delivery0_.courier as courier5_0_0_,
-        delivery0_.status as status6_0_0_ 
-    from
-        delivery delivery0_ 
-    where
-        delivery0_.id=?
-Delivery(id=1, courier=CJ택배, status=READY, address=Address(city=서울시, street=논현동, zipcode=500001))
-서울시 논현동, 50000
-서울시 논현동, 500001
-```
-참고로 이 방식의 경우에는 Address 객체가 null이거나 엔티티 자체에 세팅을 하지 않을 경우 테이블에는 해당 컬럼이 전부 null로 세팅된다.
-
-## Collection Value Type vs. @OneToMany      
-이 부분은 어떻게 보면 @OneToMany와 상당부분 유사하다.     
-
-예를 들면 쇼핑몰을 통해서 주문을 하다보면 배송지를 선택하는데 대부분 여러개의 배송지를 등록할 수 있게 되어 있다.     
-
-보통 자신이 근무하는 회사 주소랑 집 주소를 등록해서 사용하는 경우가 많은데 그러면 이것을 어떻게 표현할 수 있는가 할 것이다.      
-
-딱 보면 1:N의 연관관계를 가지고 있다는 것을 알 수 있으니 @OneToMany로 결정지을 수 있다.      
-
-하지만 이 경우에는 기존에 만들어 둔 Address객체를 엔티티로 격상시켜야 하는 경우가 생기게 된다.      
-
-그러면 선택지는 둘이다. 
-
-1. @ElementCollection, @CollectionTable를 활용해 Address를 Collection Value Type로 표현한다.      
-
-2. 그냥 Address를 엔티티로 격상시킨다.     
-
-즉, 설계 초기에 이미 고려되어야 하는 부분이라는 생각이 든다.      
-
-그럼 이제 이것을 어떻게 풀어갈지 한번 보자.      
-
-일단 이런 생각도 할 수 있다.      
-
-'여러개의 배송지 주소를 JSON스트링으로 보관하고 가져와서 파싱해서 사용해도 될거 같은데?'      
-
-물론 가능하긴 하다. 하지만 이럴 경우 등록될 배송지의 수가 많아지면 lob을 사용해야 할 수도 있다.      
-
-그외에도 몇가지 제약들이 좀 걸린다. 그렇다고 DB가 Collection타입을 저장하는 것을 지원하지 않는다. ~~혹시... 지원하는 DB가 있니?~~     
-
-그러면 결국 다음과 같은 erd구조를 가져가야 한다.     
-
-![실행이미지](https://github.com/basquiat78/completedJPA/blob/10.value-type/capture/capture1.png)     
-
-사실 모든 컬럼에 중복 허용을 방지할 것인지에 대한 표현이 좀 안되긴 하지만 어째든 저런 식으로 테이블을 따로 두고 컬렉션 정보를 저장해야 한다.     
-
-하지만 이 방법은 몇가지 제약사항을 가지고 있다.     
-
-erd를 보면 알겠지만 pk가 없다. 그럴 수 밖에 없는 것이 이 녀석은 엔티티가 아니라 값 타입이기 때문에 pk라는 개념이 없는 것이다.      
-
-이것은 변경사항에 대한 추적이 불가능하다.      
-
-이게 무슨 소리인지 하나씩 알아가 보자.      
-
-Member
-
-```
-package io.basquiat.model.embedded;
-
-import java.util.HashSet;
-import java.util.Set;
-
-import javax.persistence.CollectionTable;
-import javax.persistence.ElementCollection;
-import javax.persistence.Embedded;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Table;
-
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
-
-@Entity(name = "embedded_member")
-@Table(name = "member")
-@Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@ToString
-public class Member {
-
-	@Builder
-	public Member(String id, String password, String name, String birth, String phone, Address address) {
-		super();
-		this.id = id;
-		this.password = password;
-		this.name = name;
-		this.birth = birth;
-		this.phone = phone;
-		this.address = address;
-	}
-
-	/** 사용자 아이디 */
-	@Id
-	private String id;
-
-	/** 사용자 비번 */
-	private String password;
-	
-	/** 사용자 이름 */
-	private String name;
-	
-	/** 사용자 생년월일 */
-	private String birth;
-	
-	/** 사용자 전번 */
-	private String phone;
-	
-	/** 사용자 주소 */
-	@Embedded
-	private Address address;
-	
-	@ElementCollection
-	@CollectionTable(name = "delivery_address", 
-				    joinColumns = @JoinColumn(name = "member_id"))
-	private Set<Address> deliveryAddress = new HashSet<>();
-	
-}
-```
-다음과 같이 두개의 어노테이션을 사용하게 된다.      
-
-@ElementCollection은 해당 프로퍼티가 컬렉션 값 타입이라는 것을 지정하는 것이고 테이블을 생성하기 때문에 @CollectionTable을 이용해서 테이블의 이름을 설정할 수 있다.     
-
-당연히 erd를 보면 알겠지만 생성할 delivery_address와의 연관관계를 알기 위해서는 조인 컬럼이 필요하다.     
-
-그러면 일단 테이블이 어떻게 생성되는지 한번 확인해 보자.
-
-```
-package io.basquiat;
-
-import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
-import javax.persistence.EntityTransaction;
-import javax.persistence.Persistence;
-
-/**
- * 
- * created by basquiat
- *
- */
-public class jpaMain {
-
-    public static void main(String[] args) {
-        EntityManagerFactory emf = Persistence.createEntityManagerFactory("basquiat");
-        EntityManager em = emf.createEntityManager();
-        EntityTransaction tx = em.getTransaction();
-        tx.begin();
-        try {
-        	
-        	tx.commit();
-        } catch(Exception e) {
-        	e.printStackTrace();
-            tx.rollback();
-        } finally {
-            em.close();
-        }
-        emf.close();
-    }
-    
-}
-
-result grid
-Hibernate: 
-    
-    drop table if exists delivery
-Hibernate: 
-    
-    drop table if exists delivery_address
-Hibernate: 
-    
-    drop table if exists member
-Hibernate: 
-    
-    create table delivery (
-       id bigint not null auto_increment,
-        member_city varchar(255),
-        member_street varchar(255),
-        member_zipcode varchar(255),
-        courier varchar(255),
-        status varchar(255),
-        primary key (id)
-    ) engine=InnoDB
-Hibernate: 
-    
-    create table delivery_address (
-       member_id varchar(255) not null,
-        member_city varchar(255),
-        member_street varchar(255),
-        member_zipcode varchar(255)
-    ) engine=InnoDB
-Hibernate: 
-    
-    create table member (
-       id varchar(255) not null,
-        member_city varchar(255),
-        member_street varchar(255),
-        member_zipcode varchar(255),
-        birth varchar(255),
-        name varchar(255),
-        password varchar(255),
-        phone varchar(255),
-        primary key (id)
-    ) engine=InnoDB
-Hibernate: 
-    
-    alter table delivery_address 
-       add constraint FK7txh3nxg2wpt4lmsgalnxpcm5 
-       foreign key (member_id) 
-       references member (id)
-
-```
-delivery_address테이블이 생성된 것을 알 수 있다.      
-
-그러면 이제 어떻게 사용하는지 살펴보자. 기본과 크게 다를 바가 없다.
-
-```
-package io.basquiat;
-
-import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
-import javax.persistence.EntityTransaction;
-import javax.persistence.Persistence;
-
-import io.basquiat.model.embedded.Address;
-import io.basquiat.model.embedded.Member;
-
-/**
- * 
- * created by basquiat
- *
- */
-public class jpaMain {
-
-    public static void main(String[] args) {
-        EntityManagerFactory emf = Persistence.createEntityManagerFactory("basquiat");
-        EntityManager em = emf.createEntityManager();
-        EntityTransaction tx = em.getTransaction();
-        tx.begin();
-        try {
-        	
-        	// 1.address 생성
-        	Address address = Address.builder().city("서울시")
-        									   .street("논현동")
-        									   .zipcode("50000")
-        									   .build();
-        	
-        	Address myHomeAddress = Address.builder().city("서울시")
-												   	 .street("논현동 우리집")
-												   	 .zipcode("50000")
-												   	 .build();
-        	
-        	Address myOfficialAddress = Address.builder().city("서울시")
-													   .street("논현동 회사")
-													   .zipcode("50000")
-													   .build();
-        	
-        	// 신규가입자 
-        	Member newMember = Member.builder().id("basquiat")
-        										.password("mypassword")
-        										.name("Jean-Michel-Basquiat")
-        										.birth("1960-12-22")
-        										.phone("010-0000-00000")
-        										.address(address)
-        										.build();
-        	
-        	newMember.getDeliveryAddress().add(myHomeAddress);
-        	newMember.getDeliveryAddress().add(myOfficialAddress);
-        	em.persist(newMember);
-        	
-        	em.flush();
-        	em.clear();
-        	
-        	Member selectedMember = em.find(Member.class, newMember.getId());
-        	System.out.println(selectedMember.toString());
-        	System.out.println(selectedMember.getDeliveryAddress());
-        	System.out.println("-------------");
-        	
-        	tx.commit();
-        } catch(Exception e) {
-        	e.printStackTrace();
-            tx.rollback();
-        } finally {
-            em.close();
-        }
-        emf.close();
-    }
-    
-}
-
-result grid
-
-Hibernate: 
-    /* insert io.basquiat.model.embedded.Member
-        */ insert 
-        into
-            member
-            (member_city, member_street, member_zipcode, birth, name, password, phone, id) 
-        values
-            (?, ?, ?, ?, ?, ?, ?, ?)
-Hibernate: 
-    /* insert collection
-        row io.basquiat.model.embedded.Member.deliveryAddress */ insert 
-        into
-            delivery_address
-            (member_id, member_city, member_street, member_zipcode) 
-        values
-            (?, ?, ?, ?)
-Hibernate: 
-    /* insert collection
-        row io.basquiat.model.embedded.Member.deliveryAddress */ insert 
-        into
-            delivery_address
-            (member_id, member_city, member_street, member_zipcode) 
-        values
-            (?, ?, ?, ?)
-Hibernate: 
-    select
-        member0_.id as id1_2_0_,
-        member0_.member_city as member_c2_2_0_,
-        member0_.member_street as member_s3_2_0_,
-        member0_.member_zipcode as member_z4_2_0_,
-        member0_.birth as birth5_2_0_,
-        member0_.name as name6_2_0_,
-        member0_.password as password7_2_0_,
-        member0_.phone as phone8_2_0_ 
-    from
-        member member0_ 
-    where
-        member0_.id=?
-Hibernate: 
-    select
-        deliveryad0_.member_id as member_i1_1_0_,
-        deliveryad0_.member_city as member_c2_1_0_,
-        deliveryad0_.member_street as member_s3_1_0_,
-        deliveryad0_.member_zipcode as member_z4_1_0_ 
-    from
-        delivery_address deliveryad0_ 
-    where
-        deliveryad0_.member_id=?
-Member(id=basquiat, password=mypassword, name=Jean-Michel-Basquiat, birth=1960-12-22, phone=010-0000-00000, address=Address(city=서울시, street=논현동, zipcode=50000), deliveryAddress=[Address(city=서울시, street=논현동 회사, zipcode=50000), Address(city=서울시, street=논현동 우리집, zipcode=50000)])
-[Address(city=서울시, street=논현동 회사, zipcode=50000), Address(city=서울시, street=논현동 우리집, zipcode=50000)]
--------------
-Hibernate: 
-    /* delete collection io.basquiat.model.embedded.Member.deliveryAddress */ delete 
-        from
-            delivery_address 
-        where
-            member_id=?
-Hibernate: 
-    /* insert collection
-        row io.basquiat.model.embedded.Member.deliveryAddress */ insert 
-        into
-            delivery_address
-            (member_id, member_city, member_street, member_zipcode) 
-        values
-            (?, ?, ?, ?)
-Hibernate: 
-    /* insert collection
-        row io.basquiat.model.embedded.Member.deliveryAddress */ insert 
-        into
-            delivery_address
-            (member_id, member_city, member_street, member_zipcode) 
-        values
-            (?, ?, ?, ?)
-
-```
-결과를 보니 기본적으로 이 경우에는 LAZY가 기본이라는 것을 알 수 있다.     
-
-그런데 뒤에 delete 쿼리가 나가고 다시 인서트하는 로그가 찍힌다.     
-
-그래서 Member에서 List타입으로 변경을 시도해 봤다.
-
-```
-package io.basquiat.model.embedded;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import javax.persistence.CollectionTable;
-import javax.persistence.ElementCollection;
-import javax.persistence.Embedded;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.Table;
-
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
-
-@Entity(name = "embedded_member")
-@Table(name = "member")
-@Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@ToString(exclude = "deliveryAddress")
-public class Member {
-
-	@Builder
-	public Member(String id, String password, String name, String birth, String phone, Address address) {
-		super();
-		this.id = id;
-		this.password = password;
-		this.name = name;
-		this.birth = birth;
-		this.phone = phone;
-		this.address = address;
-	}
-
-	/** 사용자 아이디 */
-	@Id
-	private String id;
-
-	/** 사용자 비번 */
-	private String password;
-	
-	/** 사용자 이름 */
-	private String name;
-	
-	/** 사용자 생년월일 */
-	private String birth;
-	
-	/** 사용자 전번 */
-	private String phone;
-	
-	/** 사용자 주소 */
-	@Embedded
-	private Address address;
-	
-	@ElementCollection
-	@CollectionTable(name = "delivery_address", 
-					 joinColumns = @JoinColumn(name = "member_id"))
-	private List<Address> deliveryAddress = new ArrayList<>();
-	
-}
-
-result grid
-
-Hibernate: 
-    /* insert io.basquiat.model.embedded.Member
-        */ insert 
-        into
-            member
-            (member_city, member_street, member_zipcode, birth, name, password, phone, id) 
-        values
-            (?, ?, ?, ?, ?, ?, ?, ?)
-Hibernate: 
-    /* insert collection
-        row io.basquiat.model.embedded.Member.deliveryAddress */ insert 
-        into
-            delivery_address
-            (member_id, member_city, member_street, member_zipcode) 
-        values
-            (?, ?, ?, ?)
-Hibernate: 
-    /* insert collection
-        row io.basquiat.model.embedded.Member.deliveryAddress */ insert 
-        into
-            delivery_address
-            (member_id, member_city, member_street, member_zipcode) 
-        values
-            (?, ?, ?, ?)
-Hibernate: 
-    select
-        member0_.id as id1_2_0_,
-        member0_.member_city as member_c2_2_0_,
-        member0_.member_street as member_s3_2_0_,
-        member0_.member_zipcode as member_z4_2_0_,
-        member0_.birth as birth5_2_0_,
-        member0_.name as name6_2_0_,
-        member0_.password as password7_2_0_,
-        member0_.phone as phone8_2_0_ 
-    from
-        member member0_ 
-    where
-        member0_.id=?
-Member(id=basquiat, password=mypassword, name=Jean-Michel-Basquiat, birth=1960-12-22, phone=010-0000-00000, address=Address(city=서울시, street=논현동, zipcode=50000))
-Hibernate: 
-    select
-        deliveryad0_.member_id as member_i1_1_0_,
-        deliveryad0_.member_city as member_c2_1_0_,
-        deliveryad0_.member_street as member_s3_1_0_,
-        deliveryad0_.member_zipcode as member_z4_1_0_ 
-    from
-        delivery_address deliveryad0_ 
-    where
-        deliveryad0_.member_id=?
-Address(city=서울시, street=논현동 우리집, zipcode=50000)
-Address(city=서울시, street=논현동 회사, zipcode=50000)
-```
-나는 순서는 중요하지 않고 중복을 방지하기 위해서 Set를 사용했는데 List로 변경해야 하나 생각했다가 구글신에게 물어 본 결과 다음과 같은 결론을 얻었다.     
-
-```
-Set에 저장할 Value Type의 경우에는 equals와 hashCode를 구현해라.       
-```
-따라서 Address에 다음과 같이 
-
-```
-package io.basquiat.model.embedded;
+package io.basquiat.jpql;
 
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
@@ -1260,8 +128,8 @@ import lombok.ToString;
 
 @Getter
 @NoArgsConstructor
-@Embeddable
 @ToString
+@Embeddable
 @EqualsAndHashCode
 public class Address {
 
@@ -1292,114 +160,15 @@ public class Address {
 	
 }
 ```
-롬복의 어노테이션을 이용했다.     
-
-그랬더니 delete 쿼리를 날리고 다시 인서트하는 로그가 사라졌다.      
-
-'어.... 의도치 않긴 하지만 이런 사실을 모르면 약간 위험한데? 쓸데없는 쿼리가 나간다니'       
-
-만일 이런 사실을 몰랐다면 N+1의 쿼리가 계속 나간다는 거 아닌가?     
-
-stackoverflow를 살펴보니 이것은 이 경우 뿐만 아니라 연관관계 매핑을 사용할 때도 값은 현상이 발생한다는 것을 찾았다.     
-
-그 이유는 Set의 특징때문이라고 하는데 중복을 허용하지 않기 때문에 객체가 추가될때마다 equals 메서드로 같은 객체를 비교한다고 한다.    
-
-게다가 HashSet은 해시 알고리즘을 사용하기 때문에 해시코드를 사용해서 데이터를 분류해서 저장한다.     
-
-따라서 equals와 hashcode 두개를 같이 사용한다.      
-
-아니..... 근데 이거와 별개로 왜 위와 같은 현상이 발생하는지는 잘 모르겠다.       
-
-다만 이런 현상이 있다는 것을 아는 것이 더 중요하다고 생각한다.     
-
-그리고 책에서도 이런 내용을 그냥 건성으로 봐서 건너뛴거 같은데 값타입을 사용할 때는 특히 equals와 hashCode를 구현해야한다는 내용이 있다.     
-
-그래서 한번 다음과 같이도 사용해 보고자 한다.     
-
-```
-package io.basquiat.model.embedded;
-
-import java.util.HashSet;
-import java.util.Set;
-
-import javax.persistence.CollectionTable;
-import javax.persistence.ElementCollection;
-import javax.persistence.Embedded;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.Table;
-
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
-
-@Entity(name = "embedded_member")
-@Table(name = "member")
-@Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@ToString(exclude = "deliveryAddress")
-public class Member {
-
-	@Builder
-	public Member(String id, String password, String name, String birth, String phone, Address address) {
-		super();
-		this.id = id;
-		this.password = password;
-		this.name = name;
-		this.birth = birth;
-		this.phone = phone;
-		this.address = address;
-	}
-
-	/** 사용자 아이디 */
-	@Id
-	private String id;
-
-	/** 사용자 비번 */
-	private String password;
-	
-	/** 사용자 이름 */
-	private String name;
-	
-	/** 사용자 생년월일 */
-	private String birth;
-	
-	/** 사용자 전번 */
-	private String phone;
-	
-	/** 사용자 주소 */
-	@Embedded
-	private Address address;
-	
-	@ElementCollection
-	@CollectionTable(name = "delivery_address", 
-					 joinColumns = @JoinColumn(name = "member_id"))
-	private Set<Address> deliveryAddress = new HashSet<>();
-	
-	@ElementCollection
-	@CollectionTable(name = "favorite_coffee_shop", 
-					 joinColumns = @JoinColumn(name = "member_id"))
-	private Set<String> favoriteCoffeeShop = new HashSet<>();
-	
-}
-```
-객체가 아닌 String타입의 좋아하는 커피숍이라는 컬렉션 타입을 한번 저장해 보자.
+지금까지 테스트해왔던 것과 별반 차이없다.     
 
 ```
 package io.basquiat;
-
-import java.util.Set;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
 import javax.persistence.Persistence;
-
-import io.basquiat.model.embedded.Address;
-import io.basquiat.model.embedded.Member;
 
 /**
  * 
@@ -1415,52 +184,6 @@ public class jpaMain {
         tx.begin();
         try {
         	
-        	// 1.address 생성
-        	Address address = Address.builder().city("서울시")
-        									   .street("논현동")
-        									   .zipcode("50000")
-        									   .build();
-        	
-        	Address myHomeAddress = Address.builder().city("서울시")
-												   	 .street("논현동 우리집")
-												   	 .zipcode("50000")
-												   	 .build();
-        	
-        	Address myOfficialAddress = Address.builder().city("서울시")
-													   .street("논현동 회사")
-													   .zipcode("50000")
-													   .build();
-        	
-        	// 신규가입자 
-        	Member newMember = Member.builder().id("basquiat")
-        										.password("mypassword")
-        										.name("Jean-Michel-Basquiat")
-        										.birth("1960-12-22")
-        										.phone("010-0000-00000")
-        										.address(address)
-        										.build();
-        	
-        	newMember.getDeliveryAddress().add(myHomeAddress);
-        	newMember.getDeliveryAddress().add(myOfficialAddress);
-        	
-        	newMember.getFavoriteCoffeeShop().add("별다방");
-        	newMember.getFavoriteCoffeeShop().add("커피 자판기 일명 벽다방");
-        	newMember.getFavoriteCoffeeShop().add("커피콩");
-        	
-        	em.persist(newMember);
-        	
-        	em.flush();
-        	em.clear();
-        	
-        	Member selectedMember = em.find(Member.class, newMember.getId());
-        	System.out.println(selectedMember.toString());
-        	
-        	Set<Address> selectedAddress = selectedMember.getDeliveryAddress();
-        	selectedAddress.stream().forEach(add -> System.out.println(add.toString()));
-        	
-        	Set<String> selectedCoffeeShop = selectedMember.getFavoriteCoffeeShop();
-        	selectedCoffeeShop.stream().forEach(System.out::println);
-        	
         	tx.commit();
         } catch(Exception e) {
         	e.printStackTrace();
@@ -1472,540 +195,748 @@ public class jpaMain {
     }
     
 }
+```
+테이블을 한번 생성해 보자.      
+
+```
+INSERT INTO basquiat_member 
+	(
+	 id, member_city, member_street, member_zipcode, age, name
+	)
+	VALUES 
+    (
+	 'user1', 'city1', 'street1', '5000', 30, 'basquiat'
+    );
+INSERT INTO basquiat_member 
+	(
+	 id, member_city, member_street, member_zipcode, age, name
+	)
+	VALUES 
+    (
+	 'user2', 'city2', 'street2', '5001', 31, 'basquiat1'
+    );
+    
+INSERT INTO basquiat_member 
+	(
+	 id, member_city, member_street, member_zipcode, age, name
+	)
+	VALUES 
+    (
+	 'user3', 'city3', 'street3', '5003', 32, 'basquiat2'
+    );
+```
+코드레벨에서 넣을 수 있지만 스크립트로 그냥 한번에 데이터를 넣고 persistence.xml에서 create를 none으로 변경하고 테스트를 해보자.
+
+전통적인 방식의 sql은 다음과 같이 날리게 된다.
+
+```
+SELECT * FROM basquiat_member;
+```
+다음 밑의 코드는 이것을 JPQL로 표현한 것읻.
+
+```
+TypedQuery<Member> member = em.createQuery("SELECT m FROM Member m", Member.class);
+```
+여기서 반환 타입인 TypedQuery에 주목해 보자. 보통 뒤에 어떤 클래스에 매핑되는지 대한 정보가 존재할 경우 사용하게 된다.      
+
+이때 내부에 셀렉트 비슷한 형식의 문법에서 Member는 엔티티를 지칭하는데 만일 Member라는 객체가 여러개 있어서 다음과 같이 작성을 했다고 생각을 해보자.     
+
+```
+package io.basquiat.jpql;
+
+import javax.persistence.Embedded;
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.Table;
+
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+
+@Entity(name = "BM")
+@Table(name = "basquiat_member")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@ToString
+public class Member {
+	
+	@Builder
+	public Member(String id, String name, int age, Address address) {
+		super();
+		this.id = id;
+		this.name = name;
+		this.age = age;
+		this.address = address;
+	}
+
+	@Id
+	private String id;
+	
+	private String name;
+	
+	private int age;
+
+	@Embedded
+	private Address address;
+
+}
+```
+@Entity는 name을 지칭하지 않으면 클래스 이름을 따른다. 즉 @Entity(name = "Member")가 기본이 된다. 그것을 @Entity(name = "BM")이라고 지칭하면
+
+```
+TypedQuery<Member> member = em.createQuery("SELECT m FROM BM m", Member.class);
+```
+이라고 작성하게 된다.
+
+이때 JPQL문법의 특징 중 하나는 객체 대상에 대한 별칭을 줘야 한다. 일반적으로 AS는 생략이 가능하기 때문에 위 코드에서는 특별히 AS를 넣지 않았다.      
+
+가장 중요한 것이 이것인데 이 별칭을 통해서 엔티티의 프로퍼티, 즉 변수명으로 접근하게 된다.               
+
+어쨰든 이런 코드 방식을 따르는 것을 보면         
+
+1. 테이블이 아닌 객체를 검색하는 객체지향 쿼리다.       
+
+이 특징이 적용되는 것이다.      
+
+이 코드는 반환 타입이 TypedQuery라는 객체가 되는데 이 코드 자체만으로는 실제로 쿼리가 나가지 않는다.      
+
+그러면 실제 쿼리를 날려서 데이터를 가져와야 하는데 여기서 몇 가지 API를 제공한다.
+
+### .getResultList()     
+메소드 명만 봐도 이것은 모든 리스트 객체를 반환하는 것을 알 수 있다.      
+
+말보다는 코드와 결과로 직접 확인하자.
+
+```
+TypedQuery<Member> queryMember = em.createQuery("SELECT m FROM Member m", Member.class);
+        	System.out.println("Start !!!!!!!!!");
+        	List<Member> list = queryMember.getResultList();
+        	System.out.println(list);
 
 result grid
 
+Start !!!!!!!!!
 Hibernate: 
-    /* insert io.basquiat.model.embedded.Member
-        */ insert 
-        into
-            member
-            (member_city, member_street, member_zipcode, birth, name, password, phone, id) 
-        values
-            (?, ?, ?, ?, ?, ?, ?, ?)
-Hibernate: 
-    /* insert collection
-        row io.basquiat.model.embedded.Member.deliveryAddress */ insert 
-        into
-            delivery_address
-            (member_id, member_city, member_street, member_zipcode) 
-        values
-            (?, ?, ?, ?)
-Hibernate: 
-    /* insert collection
-        row io.basquiat.model.embedded.Member.deliveryAddress */ insert 
-        into
-            delivery_address
-            (member_id, member_city, member_street, member_zipcode) 
-        values
-            (?, ?, ?, ?)
-Hibernate: 
-    /* insert collection
-        row io.basquiat.model.embedded.Member.favoriteCoffeeShop */ insert 
-        into
-            favorite_coffee_shop
-            (member_id, favoriteCoffeeShop) 
-        values
-            (?, ?)
-Hibernate: 
-    /* insert collection
-        row io.basquiat.model.embedded.Member.favoriteCoffeeShop */ insert 
-        into
-            favorite_coffee_shop
-            (member_id, favoriteCoffeeShop) 
-        values
-            (?, ?)
-Hibernate: 
-    /* insert collection
-        row io.basquiat.model.embedded.Member.favoriteCoffeeShop */ insert 
-        into
-            favorite_coffee_shop
-            (member_id, favoriteCoffeeShop) 
-        values
-            (?, ?)
-Hibernate: 
-    select
-        member0_.id as id1_3_0_,
-        member0_.member_city as member_c2_3_0_,
-        member0_.member_street as member_s3_3_0_,
-        member0_.member_zipcode as member_z4_3_0_,
-        member0_.birth as birth5_3_0_,
-        member0_.name as name6_3_0_,
-        member0_.password as password7_3_0_,
-        member0_.phone as phone8_3_0_ 
-    from
-        member member0_ 
-    where
-        member0_.id=?
-Hibernate: 
-    select
-        favoriteco0_.member_id as member_i1_2_0_,
-        favoriteco0_.favoriteCoffeeShop as favorite2_2_0_ 
-    from
-        favorite_coffee_shop favoriteco0_ 
-    where
-        favoriteco0_.member_id=?
-Member(id=basquiat, password=mypassword, name=Jean-Michel-Basquiat, birth=1960-12-22, phone=010-0000-00000, address=Address(city=서울시, street=논현동, zipcode=50000), favoriteCoffeeShop=[별다방, 커피콩, 커피 자판기 일명 벽다방])
-Hibernate: 
-    select
-        deliveryad0_.member_id as member_i1_1_0_,
-        deliveryad0_.member_city as member_c2_1_0_,
-        deliveryad0_.member_street as member_s3_1_0_,
-        deliveryad0_.member_zipcode as member_z4_1_0_ 
-    from
-        delivery_address deliveryad0_ 
-    where
-        deliveryad0_.member_id=?
-Address(city=서울시, street=논현동 회사, zipcode=50000)
-Address(city=서울시, street=논현동 우리집, zipcode=50000)
-별다방
-커피콩
-커피 자판기 일명 벽다방
-```
-primitive type의 경우에는 뭐.... 그런가보다.      
-
-이런 경우에는 다음과 같이 
-
-```
-@ElementCollection
-@CollectionTable(name = "favorite_coffee_shop", 
-				 joinColumns = @JoinColumn(name = "member_id"))
-@Column(name = "favorite_coffee_shop")
-private Set<String> favoriteCoffeeShop = new HashSet<>();
-```
-컬럼 명을 지정할 수 있다. ~~favoriteCoffeeShop이라는 컬럼명은 너무 하잖아~~    
-
-어째든 Collection Value의 첫 번째 특징이 기본적으로 LAZY방식으로 작동하고 pk, 즉 식별자 개념이 없다는 것 그리고 equals와 hashCode메소드를 오버라이딩해서 구현해야한다는 것을 알게 되었다.      
-
-그렇다면 이제 수정 및 삭제와 관련해서 한번 테스트를 해보자.       
-
-우리는 위에서 식별자 개념이 없다는 것을 배웠다. 이게 무슨 말이냐면 어떤 특정 row만 업데이트할 수 없다는 의미이다.      
-
-물론 네이티브 쿼리로 수정하면 할 수 있겠지만....      
-
-```
-// 1.address 생성
-Address address = Address.builder().city("서울시")
-								   .street("논현동")
-								   .zipcode("50000")
-								   .build();
-
-Address myHomeAddress = Address.builder().city("서울시")
-									   	 .street("논현동 우리집")
-									   	 .zipcode("50000")
-									   	 .build();
-
-Address myOfficialAddress = Address.builder().city("서울시")
-										   .street("논현동 회사")
-										   .zipcode("50000")
-										   .build();
-
-// 신규가입자 
-Member newMember = Member.builder().id("basquiat")
-									.password("mypassword")
-									.name("Jean-Michel-Basquiat")
-									.birth("1960-12-22")
-									.phone("010-0000-00000")
-									.address(address)
-									.build();
-
-newMember.getDeliveryAddress().add(myHomeAddress);
-newMember.getDeliveryAddress().add(myOfficialAddress);
-
-newMember.getFavoriteCoffeeShop().add("별다방");
-newMember.getFavoriteCoffeeShop().add("커피 자판기 일명 벽다방");
-newMember.getFavoriteCoffeeShop().add("커피콩");
-
-em.persist(newMember);
-
-em.flush();
-em.clear();
-
-Member selectedMember = em.find(Member.class, newMember.getId());
-Set<Address> selectedAddress = selectedMember.getDeliveryAddress();
-Set<String> favoriteCoffeeShop = selectedMember.getFavoriteCoffeeShop();
-
-// 업데이트가 아니라 업데이트할 address을 삭제하고 새로 추가해야 한다.
-Address removeAddress = selectedAddress.stream().filter(ra -> ra.getStreet().equals("논현동 회사"))
-												.findFirst()
-												.get();
-selectedAddress.remove(removeAddress);
-Address myNewOfficialAddress = Address.builder().city("서울시")
-											    .street("논현동 회사요")
-											    .zipcode("50000")
-											    .build();
-selectedAddress.add(myNewOfficialAddress);
-
-// 이녀석도 마찬가지
-favoriteCoffeeShop.remove("커피콩");
-favoriteCoffeeShop.add("커피콩콩");
-
-result grid 
-
-Hibernate: 
-    /* insert io.basquiat.model.embedded.Member
-        */ insert 
-        into
-            member
-            (member_city, member_street, member_zipcode, birth, name, password, phone, id) 
-        values
-            (?, ?, ?, ?, ?, ?, ?, ?)
-Hibernate: 
-    /* insert collection
-        row io.basquiat.model.embedded.Member.deliveryAddress */ insert 
-        into
-            delivery_address
-            (member_id, member_city, member_street, member_zipcode) 
-        values
-            (?, ?, ?, ?)
-Hibernate: 
-    /* insert collection
-        row io.basquiat.model.embedded.Member.deliveryAddress */ insert 
-        into
-            delivery_address
-            (member_id, member_city, member_street, member_zipcode) 
-        values
-            (?, ?, ?, ?)
-Hibernate: 
-    /* insert collection
-        row io.basquiat.model.embedded.Member.favoriteCoffeeShop */ insert 
-        into
-            favorite_coffee_shop
-            (member_id, favorite_coffee_shop) 
-        values
-            (?, ?)
-Hibernate: 
-    /* insert collection
-        row io.basquiat.model.embedded.Member.favoriteCoffeeShop */ insert 
-        into
-            favorite_coffee_shop
-            (member_id, favorite_coffee_shop) 
-        values
-            (?, ?)
-Hibernate: 
-    /* insert collection
-        row io.basquiat.model.embedded.Member.favoriteCoffeeShop */ insert 
-        into
-            favorite_coffee_shop
-            (member_id, favorite_coffee_shop) 
-        values
-            (?, ?)
-Hibernate: 
-    select
-        member0_.id as id1_3_0_,
-        member0_.member_city as member_c2_3_0_,
-        member0_.member_street as member_s3_3_0_,
-        member0_.member_zipcode as member_z4_3_0_,
-        member0_.birth as birth5_3_0_,
-        member0_.name as name6_3_0_,
-        member0_.password as password7_3_0_,
-        member0_.phone as phone8_3_0_ 
-    from
-        member member0_ 
-    where
-        member0_.id=?
-Hibernate: 
-    select
-        deliveryad0_.member_id as member_i1_1_0_,
-        deliveryad0_.member_city as member_c2_1_0_,
-        deliveryad0_.member_street as member_s3_1_0_,
-        deliveryad0_.member_zipcode as member_z4_1_0_ 
-    from
-        delivery_address deliveryad0_ 
-    where
-        deliveryad0_.member_id=?
-Hibernate: 
-    select
-        favoriteco0_.member_id as member_i1_2_0_,
-        favoriteco0_.favorite_coffee_shop as favorite2_2_0_ 
-    from
-        favorite_coffee_shop favoriteco0_ 
-    where
-        favoriteco0_.member_id=?
-Hibernate: 
-    /* delete collection io.basquiat.model.embedded.Member.deliveryAddress */ delete 
+    /* SELECT
+        m 
+    FROM
+        Member m */ select
+            member0_.id as id1_0_,
+            member0_.member_city as member_c2_0_,
+            member0_.member_street as member_s3_0_,
+            member0_.member_zipcode as member_z4_0_,
+            member0_.age as age5_0_,
+            member0_.name as name6_0_ 
         from
-            delivery_address 
-        where
-            member_id=?
+            basquiat_member member0_
+[
+	Member(id=user1, name=basquiat, age=30, address=Address(city=city1, street=street1, zipcode=5000)), 
+	Member(id=user2, name=basquiat1, age=31, address=Address(city=city2, street=street2, zipcode=5001)), 
+	Member(id=user3, name=basquiat2, age=32, address=Address(city=city3, street=street3, zipcode=5003))
+]
+```
+
+### .getSingleResult()
+역시 메소드 명으로 알 수 있다.    
+
+코드로 한번 보자.
+
+```
+TypedQuery<Member> queryMember = em.createQuery("SELECT m FROM Member m", Member.class)
+								.setMaxResults(1);
+System.out.println("Start !!!!!!!!!");
+Member list = queryMember.getSingleResult();
+System.out.println(list);
+
+result grid
+
+Start !!!!!!!!!
 Hibernate: 
-    /* insert collection
-        row io.basquiat.model.embedded.Member.deliveryAddress */ insert 
-        into
-            delivery_address
-            (member_id, member_city, member_street, member_zipcode) 
-        values
-            (?, ?, ?, ?)
-Hibernate: 
-    /* insert collection
-        row io.basquiat.model.embedded.Member.deliveryAddress */ insert 
-        into
-            delivery_address
-            (member_id, member_city, member_street, member_zipcode) 
-        values
-            (?, ?, ?, ?)
-Hibernate: 
-    /* delete collection row io.basquiat.model.embedded.Member.favoriteCoffeeShop */ delete 
+    /* SELECT
+        m 
+    FROM
+        Member m */ select
+            member0_.id as id1_0_,
+            member0_.member_city as member_c2_0_,
+            member0_.member_street as member_s3_0_,
+            member0_.member_zipcode as member_z4_0_,
+            member0_.age as age5_0_,
+            member0_.name as name6_0_ 
         from
-            favorite_coffee_shop 
+            basquiat_member member0_ limit ?
+Member(id=user1, name=basquiat, age=30, address=Address(city=city1, street=street1, zipcode=5000))
+```
+JPQL 문법에서 LIMIT절을 지원하지 않는데 (왜 안될까???) 그래서 setMaxResults(int maxResult)를 통해서 하나만 가져오게 만들고 테스트 한다.     
+
+이 녀석은 queryDSL에서 fetchOne()와 비슷하다. 하지만 차이점이 있다. fetchOne()은 없으면 null을 반환하게 되어 있는데 이 녀석은 그렇지 않다.      
+
+물론 스프링부트와 연계해서 쓰게 되면 최근에는 null처리를 위해 Optional을 사용하게 되지만 하이버네이트 자체 문법에서는 에러를 뱉는다.     
+
+예를 들면
+
+```
+TypedQuery<Member> queryMember = em.createQuery("SELECT m FROM Member m", Member.class);
+System.out.println("Start !!!!!!!!!");
+Member list = queryMember.getSingleResult();
+System.out.println(list);
+
+result grid
+
+Start !!!!!!!!!
+Hibernate: 
+    /* SELECT
+        m 
+    FROM
+        Member m */ select
+            member0_.id as id1_0_,
+            member0_.member_city as member_c2_0_,
+            member0_.member_street as member_s3_0_,
+            member0_.member_zipcode as member_z4_0_,
+            member0_.age as age5_0_,
+            member0_.name as name6_0_ 
+        from
+            basquiat_member member0_
+javax.persistence.NonUniqueResultException: query did not return a unique result: 3
+```
+이것은 예상되는 에러인데 아직 배우지 않았지만 다음과 같은 코드의 경우에는      
+
+```
+TypedQuery<Member> queryMember = em.createQuery("SELECT m FROM Member m WHERE m.id = :id", Member.class)
+								.setParameter("id", "dddddd");
+System.out.println("Start !!!!!!!!!");
+Member list = queryMember.getSingleResult();
+System.out.println(list);
+
+result grid
+
+Start !!!!!!!!!
+Hibernate: 
+    /* SELECT
+        m 
+    FROM
+        Member m 
+    WHERE
+        m.id = :id */ select
+            member0_.id as id1_0_,
+            member0_.member_city as member_c2_0_,
+            member0_.member_street as member_s3_0_,
+            member0_.member_zipcode as member_z4_0_,
+            member0_.age as age5_0_,
+            member0_.name as name6_0_ 
+        from
+            basquiat_member member0_ 
         where
-            member_id=? 
-            and favorite_coffee_shop=?
-Hibernate: 
-    /* insert collection
-        row io.basquiat.model.embedded.Member.favoriteCoffeeShop */ insert 
-        into
-            favorite_coffee_shop
-            (member_id, favorite_coffee_shop) 
-        values
-            (?, ?)
+            member0_.id=?
+javax.persistence.NoResultException: No entity found for query
+	at org.hibernate.query.internal.AbstractProducedQuery.getSingleResult(AbstractProducedQuery.java:1583)
+	at io.basquiat.jpaMain.main(jpaMain.java:30)
 ```
-다음과 같이 수정할 객체를 지우고 다시 새로 끼워넣어야 한다.      
+NoResultException을 뱉어 낸다.     
 
-값 타입 컬렉션은 cascade와 orphanRemoval 속성이 자동으로 추가된 형식이라는 것을 알 수 있다.      
+getResultList()의 경우에는 조회된 결과가 없으면 null을 반환하니 신경쓰지 않아도 되지만 getSingleResult()을 사용시에는 주의를 요한다.      
 
-특히 Address의 경우에는 해당 member_id에 해당하는 모든 값을 지우고 다시 집어 넣는다는 것을 통해 위 해당 기능이 자동으로 설정되어 있다는 것을 알 수 있다.      
+~~하지만 결국 우리는 스프링부트와 쓰게 되겠지~~      
 
-pk, 즉 식별자가 없으니 jpa에서는 느낌적으로 이렇게 생각하는 것 같다.           
+### Parameter Binding
+실무에서는 결국에 우리는 데이터를 조회하기 위해서는 조건을 통해서 가져와야 한다.     
 
-```
-에라! 모르겠다!!! 일단 그냥 member_id에 해당하는 값을 지우고 다시 집어넣으면 되잖아!
-```
-문제는 이것이 성능상에 이슈가 발생 할 수 있다는 것이다.      
+이 방식은 preparedStatement의 방식과 거의 유사하다.     
 
-지금이야 딸랑 2개지만 만일 어떤 유저가 배송지 주소를 10개를 세팅했다고 가정을 해보자.     
-
-그중에 이 유저가 하나의 배송지 주소를 바꾸겠다?      
-
-딱 느낌이 와야한다. 일단 그 유저의 member_id로 테이블에서 값을 지우고 인서트 쿼리가 10번을 날라갈 것이기 때문이다.      
-
-![실행이미지](https://github.com/basquiat78/completedJPA/blob/10.value-type/capture/capture2.png)     
-난 단지 하나를 바꾸고 싶었을 뿐이라고!!!      
-
-그래서 @OrderColumn이라는게 있는데 이것을 한번 사용해 보자.       
+말한 김에 한번 preparedStatement로 어떻게 사용하는지 한번 살펴보자.
 
 ```
-@OrderColumn(name = "address_id")
-@ElementCollection
-@CollectionTable(name = "delivery_address", 
-				 joinColumns = @JoinColumn(name = "member_id"))
-private List<Address> deliveryAddress = new ArrayList<>();
+Connection conn;
+PreparedStatement ps = con.prepareStatement("SELECT * FROM basquiat_member where id = ? AND city = ?");
+//일반적인 방식 -> index position
+ps.setString(1, "id");
+ps.setString(2, "city");
+
+/** name parameter binding */
+NamedParameterStatement ps = new NamedParameterStatement(con, "SELECT * FROM basquiat_member where id = :id AND city = :city");
+ps.setString("id", "id");
+ps.setString("city", "city");
 ```
-이 경우에는 Set이 아니라 List로 받아야 한다.      
+이렇게 2가지 방식을 제공하는데 JPQL에서도 똑같이 사용할 수 있다.       
 
-그리고 다시 실행을 하게 되면 
+1. NamedParameter Binding     
+
+일단 코드로 바로 살펴보자.     
 
 ```
+TypedQuery<Member> queryMember = em.createQuery("SELECT m FROM Member m WHERE m.id = :id AND m.name = :name", Member.class)
+								.setParameter("id", "user1")
+								.setParameter("name", "basquiat");
+System.out.println("Start !!!!!!!!!");
+List<Member> list = queryMember.getResultList();
+System.out.println(list);
+
+result grid
+
+Start !!!!!!!!!
 Hibernate: 
-    
-    alter table delivery_address 
-       drop 
-       foreign key FK7txh3nxg2wpt4lmsgalnxpcm5
+    /* SELECT
+        m 
+    FROM
+        Member m 
+    WHERE
+        m.id = :id 
+        AND m.name = :name */ select
+            member0_.id as id1_0_,
+            member0_.member_city as member_c2_0_,
+            member0_.member_street as member_s3_0_,
+            member0_.member_zipcode as member_z4_0_,
+            member0_.age as age5_0_,
+            member0_.name as name6_0_ 
+        from
+            basquiat_member member0_ 
+        where
+            member0_.id=? 
+            and member0_.name=?
+[
+	Member(id=user1, name=basquiat, age=30, address=Address(city=city1, street=street1, zipcode=5000))
+]
+```
+원하는대로 쿼리도 잘나가고 결과도 잘 가져왔다.     
+
+2. Index Position Parameter Binding     
+
+위치 기반 파라미터 바인딩이라고 하는데 이것은 다음과 같이 사용하게 된다.      
+
+```
+int index = 1;
+TypedQuery<Member> queryMember = em.createQuery("SELECT m FROM Member m WHERE m.id = ?1 AND m.name = ?2", Member.class)
+						         .setParameter(index++, "user1")
+        							.setParameter(index++, "basquiat");
+System.out.println("Start !!!!!!!!!");
+List<Member> list = queryMember.getResultList();
+System.out.println(list);
+
+result grid
+
+Start !!!!!!!!!
 Hibernate: 
-    
-    alter table favorite_coffee_shop 
-       drop 
-       foreign key FKgt7c8qhvvlfy1u1y5dtud3lku
+    /* SELECT
+        m 
+    FROM
+        Member m 
+    WHERE
+        m.id = ?1 
+        AND m.name = ?2 */ select
+            member0_.id as id1_0_,
+            member0_.member_city as member_c2_0_,
+            member0_.member_street as member_s3_0_,
+            member0_.member_zipcode as member_z4_0_,
+            member0_.age as age5_0_,
+            member0_.name as name6_0_ 
+        from
+            basquiat_member member0_ 
+        where
+            member0_.id=? 
+            and member0_.name=?
+[
+	Member(id=user1, name=basquiat, age=30, address=Address(city=city1, street=street1, zipcode=5000))
+]
+```
+선호하는 방식에 따라 입맛에 맞게 선택하면 될거 같다. 
+
+```
+int index = 1;
+TypedQuery<Member> queryMember = em.createQuery("SELECT m FROM Member m WHERE m.age = ?3 AND m.id = ?1 AND m.name = ?2", Member.class)
+      							.setParameter(index++, "user1")
+        							.setParameter(index++, "basquiat")
+        							.setParameter(index++, 30);
+System.out.println("Start !!!!!!!!!");
+List<Member> list = queryMember.getResultList();
+System.out.println(list);
+```
+이렇게만 위치를 잘 선정해 준다면 순서와는 상관없이 사용할 수 있다.      
+
+preparedStatement의 경우에는 이 위치가 상당히 중요하기 때문에 무언가가 중간에 껴들어가거나 하면 바인딩부분도 손을 좀 봐야하긴 하지만 JPQL은 문법 자체에 위치를 지정하기 때문에 오히려 휴먼 예러를 좀 방지할 수 있다.
+
+물론 파라미터 바인딩을 사용하지 않고 직접적으로
+
+```
+TypedQuery<Member> queryMember = em.createQuery("SELECT m FROM Member m WHERE m.age = 30 AND m.id = 'user1' AND m.name = 'basquiat'", Member.class);
+System.out.println("Start !!!!!!!!!");
+List<Member> list = queryMember.getResultList();
+System.out.println(list);
+```
+사용도 가능하지만 좀 불편하다.      
+
+아주 짧은 예제였지만 뭔가 불편하다. 왜냐하면 쿼리 자체를 작성할 때 스트링의 조합과 스트링을 더해야하는 불편함이 있다.       
+
+또한 이런 이유로 JPQL문법을 작성할 때 발생할 수 있는 오타나 여타 여러가지 휴먼에러로 인해 발생할 수 있는 실수에 대해서도 미리 알 수 없다는 것은 단점이다. ~~그래서 queryDSL같은 녀석이 있다~~     
+
+당연히 스트링의 조합이니 오타가 난다 해서 에러라고 생각하지 않을 테니 말이다.      
+
+예를 들면 동적 쿼리가 참 문제이다.      
+
+회사내부에서도 딱히 어떤 ORM을 사용하는게 아니라서 동적 쿼리를 작성할 때는 일일이 작업을 해줘야 한다.      
+
+예를 들면     
+
+```
+let { name, age, id, blah blah... } = req.body;
+
+let sql = 'SELECT * FROM basquiat_item WHERE 1 = 1';
+
+if(searchType) {
+ sql += ` AND name = '${name}'
+}
+.
+.
+.
+```
+이런 식의 쿼리를 작성해야 한다.     
+
+실제로 발생했던 에러중 다음과 같은 에러도 있었다.
+
+```
+console.log(connection.format(sql, []);
+
+result;
+
+SELECT *
+	FROM basquiat_item
+	WHERE 1=1AND name = ?AND id = ?
+```
+스트링을 다루는 도중에 빈 공백을 넣지 않아 쿼리가 '1=1AND name...'같은 식으로 날아가 에러를 발생한 경우도 봤는데 실제로 JPQL에서도 은근히 저런 오류가 많다.      
+
+따라서 좀 길어지는 쿼리를 들여쓰기 방식이나 동적 쿼리 생성시 상당히 주의를 요구하는데 저게 실제로 상당한 스트레스를 준다.      
+
+일단 if문도 많아지게 되면... 암튼 그렇다.       
+
+그러면 이런 의문이 들것이다.      
+
+'지금 우리가 JPQL에 대해 배우고 있는걸 알겠는데 영속성 컨텍스트에 대한 이야기가 없네요.'      
+
+아주 중요한 질문이다.       
+
+하지만 그와 관련된 내용은 밑에 프로젝션을 배워가면서 알아 볼 것이다.
+
+어째든 우리는 실무에서 객체로만 조회해 오지 않는다. 필요에 따라서는 원하는 컬럼의 정보만 가져오게 되는데 결국 Projection에 대한 처리도 당연히 알아야 한다.     
+
+### Projection
+
+1. Scalar Type Projection       
+
+~~scala 아니다~~     
+
+책에서도 언급되긴 하지만 스칼라 타입이라는 것은 보통 DBA분들이 많이 쓰는 용어이다.      
+
+처음 알게 된게 첫 직장에서 나갔던 첫 프로젝트의 현업분이자 기억으로는 차장님이셨던 분이 DBA분이셨는데 이 말을 자주 쓴 기억이 난다.     
+
+스택오버플로우에 [이런 글](https://stackoverflow.com/questions/6623130/scalar-vs-primitive-data-type-are-they-the-same-thing)이 있다.
+
+아무튼 다음 쿼리를 보면 실무에서 볼 수 있는 가장 일반적인 방식이라는 것을 알 수 있다.
+
+```
+요구사항: 특정 아이디에 대한 이름과 나이만 알고 싶어.
+
+SELECT name, age FROM basquiat_member WHERE id = ?;
+```
+쿼리로 치면 위와 같을 것이다. 물론 JPQL도 마찬가지이다.      
+
+```
+Query queryMember = em.createQuery("SELECT m.name, m.age FROM Member m WHERE m.id = :id")
+					.setParameter("id", "user1");
+        	
+System.out.println("Start !!!!!!!!!");
+@SuppressWarnings("unchecked")
+List<Object[]> object = queryMember.getResultList();
+object.stream().forEach(obj -> System.out.println(obj[0] + ", " + obj[1]));
+
+result grid
+
+Start !!!!!!!!!
 Hibernate: 
-    
-    drop table if exists delivery
+    /* SELECT
+        m.name,
+        m.age 
+    FROM
+        Member m 
+    WHERE
+        m.id = :id */ select
+            member0_.name as col_0_0_,
+            member0_.age as col_1_0_ 
+        from
+            basquiat_member member0_ 
+        where
+            member0_.id=?
+basquiat, 30
+```
+튜플은 일종의 어떤 값들의 배열을 의미한다. 그래서 JPQL에서는 반환타입으로 Query객체를 반환하게 된다.      
+
+예들 들면 다음과 같은 쿼리를 날렸다고 생각해 보자.
+
+```
+SELECT name, age FROM basquiat_member;
+```
+만일 여러개의 row데이터가 조회되었다고 한다면 그 형태는 
+
+```
+[
+	[name, age],
+	[name, age],
+	[name, age],
+	[name, age],
+	.
+	.
+	.
+	
+]
+```
+이런 형태로 SELECT 절에 명시한 컬럼의 순서대로 담을 것이다.      
+
+원래는 key/value로 담는게 맞지만 
+
+```
+SELECT name, age, member_city, member_street, member_zipcode FROM basquiat_member;
+
+expected result grid
+
+[
+	[name, age, member_city, member_street, member_zipcode],
+	[name, age, member_city, member_street, member_zipcode],
+	[name, age, member_city, member_street, member_zipcode],
+	[name, age, member_city, member_street, member_zipcode],
+	.
+	.
+	.
+]
+```
+그것을 결국 Object라는 객체에 뭉뚱그려서 담아내는 형식이라는 것을 알 수 있다.      
+
+당연히... 실무에서는 그대로 쓸 수 없다.      
+
+그래서 DTO를 만들고 거기에다가 담는 방식을 사용해야 한다.      
+
+MemberDTO
+
+```
+package io.basquiat.jpql;
+
+import lombok.AllArgsConstructor;
+import lombok.Value;
+
+@Value
+@AllArgsConstructor
+public class MemberDTO {
+
+	private String id;
+	
+	private String name;
+	
+	private int age;
+	
+	private String city;
+
+	private String street;
+	
+	private String zipcode;
+
+}
+```
+Immutable하게 만들기 위해서 @Value를 붙였으며 스칼라 타입의 프로젝션의 경우 DTO에 담기 위해서는 new를 사용하기 때문에 생성자가 필요하다.      
+
+그러면 코드로 한번 살펴보자.     
+
+```
+StringBuffer sb = new StringBuffer();
+sb.append("SELECT ")
+  .append("new io.basquiat.jpql.MemberDTO")
+  .append("(")
+  .append("m.id, m.name, m.age, m.address.city, m.address.street, m.address.zipcode")
+  .append(") ")
+  .append("FROM Member m ")
+  .append("WHERE m.id = :id");
+        	
+Query queryMember = em.createQuery(sb.toString(), MemberDTO.class)
+				     .setParameter("id", "user1");
+        	
+System.out.println("Start !!!!!!!!!");
+List<MemberDTO> member = queryMember.getResultList();
+member.stream().forEach(m -> System.out.println(m.toString()));
+
+result grid
+
+Start !!!!!!!!!
 Hibernate: 
-    
-    drop table if exists delivery_address
-Hibernate: 
-    
-    drop table if exists favorite_coffee_shop
-Hibernate: 
-    
-    drop table if exists member
-Hibernate: 
-    
-    create table delivery (
-       id bigint not null auto_increment,
-        member_city varchar(255),
-        member_street varchar(255),
-        member_zipcode varchar(255),
-        courier varchar(255),
-        status varchar(255),
-        primary key (id)
-    ) engine=InnoDB
-Hibernate: 
-    
-    create table delivery_address (
-       member_id varchar(255) not null,
-        member_city varchar(255),
-        member_street varchar(255),
-        member_zipcode varchar(255),
-        address_id integer not null,
-        primary key (member_id, address_id)
-    ) engine=InnoDB
-Hibernate: 
-    
-    create table favorite_coffee_shop (
-       member_id varchar(255) not null,
-        favorite_coffee_shop varchar(255)
-    ) engine=InnoDB
-Hibernate: 
-    
-    create table member (
-       id varchar(255) not null,
-        member_city varchar(255),
-        member_street varchar(255),
-        member_zipcode varchar(255),
-        birth varchar(255),
-        name varchar(255),
-        password varchar(255),
-        phone varchar(255),
-        primary key (id)
-    ) engine=InnoDB
-Hibernate: 
-    
-    alter table delivery_address 
-       add constraint FK7txh3nxg2wpt4lmsgalnxpcm5 
-       foreign key (member_id) 
-       references member (id)
-Hibernate: 
-    
-    alter table favorite_coffee_shop 
-       add constraint FKgt7c8qhvvlfy1u1y5dtud3lku 
-       foreign key (member_id) 
-       references member (id)
+    /* SELECT
+        new io.basquiat.jpql.MemberDTO(m.id,
+        m.name,
+        m.age,
+        m.address.city,
+        m.address.street,
+        m.address.zipcode) 
+    FROM
+        Member m 
+    WHERE
+        m.id = :id */ select
+            member0_.id as col_0_0_,
+            member0_.name as col_1_0_,
+            member0_.age as col_2_0_,
+            member0_.member_city as col_3_0_,
+            member0_.member_street as col_4_0_,
+            member0_.member_zipcode as col_5_0_ 
+        from
+            basquiat_member member0_ 
+        where
+            member0_.id=?
+MemberDTO(id=user1, name=basquiat, age=30, city=city1, street=street1, zipcode=5000)
 
 
+============================== 스칼라 타입과 앞으로 배울 임베디드 타입을 혼용할 수도 있다. ==============================
 
+StringBuffer sb = new StringBuffer();
+sb.append("SELECT ")
+  .append("new io.basquiat.jpql.MemberDTO")
+  .append("(")
+  .append("m.id, m.name, m.age, m.address")
+  .append(") ")
+  .append("FROM Member m ")
+  .append("WHERE m.id = :id");
+        	
+Query queryMember = em.createQuery(sb.toString(), MemberDTO.class)
+				  	.setParameter("id", "user1");
+        	
+System.out.println("Start !!!!!!!!!");
+List<MemberDTO> member = queryMember.getResultList();
+member.stream().forEach(m -> System.out.println(m.toString()));
 
+result grid
+
+Start !!!!!!!!!
 Hibernate: 
-    /* insert io.basquiat.model.embedded.Member
-        */ insert 
-        into
-            member
-            (member_city, member_street, member_zipcode, birth, name, password, phone, id) 
-        values
-            (?, ?, ?, ?, ?, ?, ?, ?)
+    /* SELECT
+        new io.basquiat.jpql.MemberDTO(m.id,
+        m.name,
+        m.age,
+        m.address) 
+    FROM
+        Member m 
+    WHERE
+        m.id = :id */ select
+            member0_.id as col_0_0_,
+            member0_.name as col_1_0_,
+            member0_.age as col_2_0_,
+            member0_.member_city as col_3_0_,
+            member0_.member_street as col_3_1_,
+            member0_.member_zipcode as col_3_2_ 
+        from
+            basquiat_member member0_ 
+        where
+            member0_.id=?
+MemberDTO(id=user1, name=basquiat, age=30, address=Address(city=city1, street=street1, zipcode=5000))
+
+```
+하지만 코드를 가만히 살펴보면 DTO의 모든 패키지를 전부 다 명시를 해줘야 한다.      
+
+게다가 스트링이기 때문에 만일 매핑할 컬럼이 많아지면 이것도 영 골치가 아프다.      
+
+JPA 양반! 꼭 이렇게 뿐이 안되는거요? ~~이래서 queryDSL을 써야 하는건가....~~      
+
+2. Embedded Type Projection       
+
+위 예제에서는 임베디드 타임과 함께 쓰는 방식의 테스트도 넣어놨다.      
+
+그러면 실제로 임베디드 타입의 정보만 가져올 수 있을까라는 의문이 들텐데 당연히 객체를 대상으로 하기 때문에 가능하다.      
+
+```
+TypedQuery<Address> queryMember = em.createQuery("SELECT m.address FROM Member m WHERE m.id = :id", Address.class)
+								 .setParameter("id", "user1");
+        	
+System.out.println("Start !!!!!!!!!");
+List<Address> address = queryMember.getResultList();
+address.stream().forEach(addr -> System.out.println(addr.toString()));
+
+result grid
+
+Start !!!!!!!!!
 Hibernate: 
-    /* insert collection
-        row io.basquiat.model.embedded.Member.deliveryAddress */ insert 
-        into
-            delivery_address
-            (member_id, address_id, member_city, member_street, member_zipcode) 
-        values
-            (?, ?, ?, ?, ?)
+    /* SELECT
+        m.address 
+    FROM
+        Member m 
+    WHERE
+        m.id = :id */ select
+            member0_.member_city as col_0_0_,
+            member0_.member_street as col_0_1_,
+            member0_.member_zipcode as col_0_2_ 
+        from
+            basquiat_member member0_ 
+        where
+            member0_.id=?
+Address(city=city1, street=street1, zipcode=5000)
+```
+
+3. Entity Type Projection
+
+말 그대로 우리가 지금까지 객체로 가져왔던 방식이다.      
+
+특히 이 녀석의 경우에는 영속성 컨텍스트의 영향을 받는다.     
+
+말이 필요없다. 그냥 코드로 보자.
+
+그 전에 Member엔티티에 @DynamicUpdate를 붙여보고 age프로퍼티에 @Setter를 달고 시작하자.     
+
+```
+TypedQuery<Member> queryMember = em.createQuery("SELECT m FROM Member m WHERE m.id = :id", Member.class)
+								.setParameter("id", "user1");
+        	
+System.out.println("Start !!!!!!!!!");
+List<Member> member = queryMember.getResultList();
+member.stream().forEach(mbr -> {
+				mbr.setAge(31);
+				System.out.println(mbr.toString());
+			});
+			
+result grid
+
+Start !!!!!!!!!
 Hibernate: 
-    /* insert collection
-        row io.basquiat.model.embedded.Member.deliveryAddress */ insert 
-        into
-            delivery_address
-            (member_id, address_id, member_city, member_street, member_zipcode) 
-        values
-            (?, ?, ?, ?, ?)
-Hibernate: 
-    /* insert collection
-        row io.basquiat.model.embedded.Member.favoriteCoffeeShop */ insert 
-        into
-            favorite_coffee_shop
-            (member_id, favorite_coffee_shop) 
-        values
-            (?, ?)
-Hibernate: 
-    /* insert collection
-        row io.basquiat.model.embedded.Member.favoriteCoffeeShop */ insert 
-        into
-            favorite_coffee_shop
-            (member_id, favorite_coffee_shop) 
-        values
-            (?, ?)
-Hibernate: 
-    /* insert collection
-        row io.basquiat.model.embedded.Member.favoriteCoffeeShop */ insert 
-        into
-            favorite_coffee_shop
-            (member_id, favorite_coffee_shop) 
-        values
-            (?, ?)
-Hibernate: 
-    select
-        member0_.id as id1_3_0_,
-        member0_.member_city as member_c2_3_0_,
-        member0_.member_street as member_s3_3_0_,
-        member0_.member_zipcode as member_z4_3_0_,
-        member0_.birth as birth5_3_0_,
-        member0_.name as name6_3_0_,
-        member0_.password as password7_3_0_,
-        member0_.phone as phone8_3_0_ 
-    from
-        member member0_ 
-    where
-        member0_.id=?
-Hibernate: 
-    select
-        deliveryad0_.member_id as member_i1_1_0_,
-        deliveryad0_.member_city as member_c2_1_0_,
-        deliveryad0_.member_street as member_s3_1_0_,
-        deliveryad0_.member_zipcode as member_z4_1_0_,
-        deliveryad0_.address_id as address_5_0_ 
-    from
-        delivery_address deliveryad0_ 
-    where
-        deliveryad0_.member_id=?
-Hibernate: 
-    select
-        favoriteco0_.member_id as member_i1_2_0_,
-        favoriteco0_.favorite_coffee_shop as favorite2_2_0_ 
-    from
-        favorite_coffee_shop favoriteco0_ 
-    where
-        favoriteco0_.member_id=?
+    /* SELECT
+        m 
+    FROM
+        Member m 
+    WHERE
+        m.id = :id */ select
+            member0_.id as id1_0_,
+            member0_.member_city as member_c2_0_,
+            member0_.member_street as member_s3_0_,
+            member0_.member_zipcode as member_z4_0_,
+            member0_.age as age5_0_,
+            member0_.name as name6_0_ 
+        from
+            basquiat_member member0_ 
+        where
+            member0_.id=?
+Member(id=user1, name=basquiat, age=31, address=Address(city=city1, street=street1, zipcode=5000))
 Hibernate: 
     /* update
-        collection row io.basquiat.model.embedded.Member.deliveryAddress */ update
-            delivery_address 
+        io.basquiat.jpql.Member */ update
+            basquiat_member 
         set
-            member_city=?,
-            member_street=?,
-            member_zipcode=? 
+            age=? 
         where
-            member_id=? 
-            and address_id=?
-Hibernate: 
-    /* delete collection row io.basquiat.model.embedded.Member.favoriteCoffeeShop */ delete 
-        from
-            favorite_coffee_shop 
-        where
-            member_id=? 
-            and favorite_coffee_shop=?
-Hibernate: 
-    /* insert collection
-        row io.basquiat.model.embedded.Member.favoriteCoffeeShop */ insert 
-        into
-            favorite_coffee_shop
-            (member_id, favorite_coffee_shop) 
-        values
-            (?, ?)
+            id=?
 ```
-delivery_address 테이블이 생성되는 쿼리를 살펴보면 @OrderColumn에 설정한 값과 fk, 즉 member_id를 하나의 pk로 묶는 것을 볼 수 있다.        
+30에서 31로 변경하면서 dirty checking이 발생하며 age를 업데이트하는 쿼리가 나가는 것을 확인할 수 있다.      
 
-그리고 실제로 값을 변경시 삭제하고 다시 인서트하는 것이 아닌 해당 row에 대해서만 업데이트 쿼리를 날린다.       
+그러면 이런 생각도 해볼 수 있겠다.     
 
-'그럼 이거 쓰면 되겠는데요?'      
+'멤버가 있으면 팀이 있을 수도 있는데 이 경우에도 가능한가요?'       
 
-사실 나는 이런 값타입을 사용할 때는 @Embedded쪽만 사용해 봤고 사실 Collection Type Value를 사용한 경험이 없다.      
+그것을 테스트하기 위해서는 일단 다음과 같이 Team이라는 엔티티를 만들어보자.      
 
-하지만 책에서나 또는 여타 블로그에서는 예상치 못한 사이드 이펙트가 발생할 수 있기 때문에 정말로 단순한 경우가 아니면 사용을 그다지 권하지 않는 것 같다.       
+아~ 그전에 옵션을 none에서 create로 변경하자.      
 
-느낌적으로 위에 예제에서 본 favoriteCoffeeShop정도?     
-
-복잡한 스키마를 가지게 되면 그냥 차라리 값타입 컬렉션을 엔티티로 승격시켜서 @OneToMany로 풀어가는게 훨씬 유리하다는 것이다.      
-
-엔티티로 승격하게 되면 해당 엔티티로 조회할 수도 있고 여러모로 유리하다. 어짜피 비슷하게 만드는데 차라리 이게 더 낫지 않을까?       
-
-## Collection Value Type move @OneToMany      
-
-기존의 사용하는 녀석이 있으니 엔티티로 승격시키기 위해서 클래스를 하나 만들어 보자.     
-
-DeliveryAddress
+Team
 
 ```
-package io.basquiat.model.embedded;
+package io.basquiat.jpql;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -2021,291 +952,154 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
-
 @Entity
-@Table(name = "delivery_address")
+@Table(name = "basquiat_team")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @ToString
-public class DeliveryAddress {
+public class Team {
 
 	@Builder
-	public DeliveryAddress(String city, String street, String zipcode) {
+	public Team(String teamName) {
 		super();
-		this.city = city;
-		this.street = street;
-		this.zipcode = zipcode;
+		this.teamName = teamName;
 	}
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 	
-	/** 시 */
-	@Column(name = "delivery_city")
-	private String city;
-	
-	/** 동 */
+	@Column(name = "name")
 	@Setter
-	@Column(name = "delivery_street")
-	private String street;
-	
-	/** 우편 번호 */
-	@Column(name = "delivery_zipcode")
-	private String zipcode;
-
-	/** 전체 주소 가져오 */
-	public String totalAddress() {
-		return city + " " + street + ", " + zipcode;
-	}
+	private String teamName;
 	
 }
-
 ```
 
-Member는 다음과 같이
+Member입장에서는 @ManyToOne의 관계를 가질 수 있기 때문에 Member 엔티티도 변경하자. 테스트에서는 단방향만 잡아보자.     
 
 ```
-package io.basquiat.model.embedded;
+package io.basquiat.jpql;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
-import javax.persistence.CascadeType;
-import javax.persistence.CollectionTable;
-import javax.persistence.Column;
-import javax.persistence.ElementCollection;
 import javax.persistence.Embedded;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
-import javax.persistence.OneToMany;
+import javax.persistence.ManyToOne;
 import javax.persistence.Table;
+
+import org.hibernate.annotations.DynamicUpdate;
 
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import lombok.ToString;
 
-@Entity(name = "embedded_member")
-@Table(name = "member")
+@Entity
+@Table(name = "basquiat_member")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@ToString(exclude = {"deliveryAddress", "favoriteCoffeeShop"})
+@ToString
+@DynamicUpdate
 public class Member {
-
+	
 	@Builder
-	public Member(String id, String password, String name, String birth, String phone, Address address) {
+	public Member(String id, String name, int age, Address address, Team team) {
 		super();
 		this.id = id;
-		this.password = password;
 		this.name = name;
-		this.birth = birth;
-		this.phone = phone;
+		this.age = age;
 		this.address = address;
+		this.team = team;
 	}
 
-	/** 사용자 아이디 */
 	@Id
 	private String id;
-
-	/** 사용자 비번 */
-	private String password;
 	
-	/** 사용자 이름 */
 	private String name;
 	
-	/** 사용자 생년월일 */
-	private String birth;
-	
-	/** 사용자 전번 */
-	private String phone;
-	
-	/** 사용자 주소 */
+	@Setter
+	private int age;
+
 	@Embedded
 	private Address address;
+	
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "team_id")
+	private Team team;
 
-	@OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
-	@JoinColumn(name = "member_id")
-	private List<DeliveryAddress> deliveryAddress = new ArrayList<>();
-	
-	@ElementCollection
-	@CollectionTable(name = "favorite_coffee_shop", 
-					 joinColumns = @JoinColumn(name = "member_id"))
-	@Column(name = "favorite_coffee_shop")
-	private Set<String> favoriteCoffeeShop = new HashSet<>();
-	
 }
 ```
-OneToMany로 사용한다.
+이제 코드를 한번 실행해 보자.
 
 ```
-// 1. embedded address 생성
-Address address = Address.builder().city("서울시")
-								   .street("논현동")
-								   .zipcode("50000")
-								   .build();
-
-// 2. delivery address
-DeliveryAddress myHomeAddress = DeliveryAddress.builder().city("서울시")
-													   	 .street("논현동 우리집")
-													   	 .zipcode("50000")
-													   	 .build();
-
-DeliveryAddress myOfficialAddress = DeliveryAddress.builder().city("서울시")
-														   	 .street("논현동 회사")
-														   	 .zipcode("50000")
-														   	 .build();
-
-// 신규가입자 
-Member newMember = Member.builder().id("basquiat")
-								   .password("mypassword")
-								   .name("Jean-Michel-Basquiat")
-								   .birth("1960-12-22")
-								   .phone("010-0000-00000")
-								   .address(address)
-								   .build();
-
-newMember.getDeliveryAddress().add(myHomeAddress);
-newMember.getDeliveryAddress().add(myOfficialAddress);
-
-newMember.getFavoriteCoffeeShop().add("별다방");
-newMember.getFavoriteCoffeeShop().add("커피 자판기 일명 벽다방");
-newMember.getFavoriteCoffeeShop().add("커피콩");
-
-em.persist(newMember);
-
+Team myTeam = Team.builder().teamName("Default Team").build();
+em.persist(myTeam);
+        	
+// address는 그냥 비우자.
+Member member = Member.builder().id("basquiat")
+								.name("Jean-Michel Basquiat")
+								.age(28)
+								.team(myTeam)
+								.build();
+em.persist(member);
 em.flush();
 em.clear();
 
-Member selectedMember = em.find(Member.class, newMember.getId());
-DeliveryAddress updateAddress = selectedMember.getDeliveryAddress().get(0);
-updateAddress.setStreet("논현동 우리집 !!!!!!");
-selectedMember.getDeliveryAddress().remove(1);
+TypedQuery<Team> selected = em.createQuery("SELECT m.team FROM Member m", Team.class);
+Team selectedTeam = selected.getSingleResult();
+selectedTeam.setTeamName("Basquiat Team");
+System.out.println(selectedTeam);
 
 result grid
 
 Hibernate: 
-    /* insert io.basquiat.model.embedded.Member
+    /* insert io.basquiat.jpql.Team
         */ insert 
         into
-            member
-            (member_city, member_street, member_zipcode, birth, name, password, phone, id) 
+            basquiat_team
+            (name) 
         values
-            (?, ?, ?, ?, ?, ?, ?, ?)
+            (?)
 Hibernate: 
-    /* insert io.basquiat.model.embedded.DeliveryAddress
+    /* insert io.basquiat.jpql.Member
         */ insert 
         into
-            delivery_address
-            (delivery_city, delivery_street, delivery_zipcode) 
+            basquiat_member
+            (member_city, member_street, member_zipcode, age, name, team_id, id) 
         values
-            (?, ?, ?)
+            (?, ?, ?, ?, ?, ?, ?)
 Hibernate: 
-    /* insert io.basquiat.model.embedded.DeliveryAddress
-        */ insert 
-        into
-            delivery_address
-            (delivery_city, delivery_street, delivery_zipcode) 
-        values
-            (?, ?, ?)
-Hibernate: 
-    /* create one-to-many row io.basquiat.model.embedded.Member.deliveryAddress */ update
-        delivery_address 
-    set
-        member_id=? 
-    where
-        id=?
-Hibernate: 
-    /* create one-to-many row io.basquiat.model.embedded.Member.deliveryAddress */ update
-        delivery_address 
-    set
-        member_id=? 
-    where
-        id=?
-Hibernate: 
-    /* insert collection
-        row io.basquiat.model.embedded.Member.favoriteCoffeeShop */ insert 
-        into
-            favorite_coffee_shop
-            (member_id, favorite_coffee_shop) 
-        values
-            (?, ?)
-Hibernate: 
-    /* insert collection
-        row io.basquiat.model.embedded.Member.favoriteCoffeeShop */ insert 
-        into
-            favorite_coffee_shop
-            (member_id, favorite_coffee_shop) 
-        values
-            (?, ?)
-Hibernate: 
-    /* insert collection
-        row io.basquiat.model.embedded.Member.favoriteCoffeeShop */ insert 
-        into
-            favorite_coffee_shop
-            (member_id, favorite_coffee_shop) 
-        values
-            (?, ?)
-Hibernate: 
-    select
-        member0_.id as id1_3_0_,
-        member0_.member_city as member_c2_3_0_,
-        member0_.member_street as member_s3_3_0_,
-        member0_.member_zipcode as member_z4_3_0_,
-        member0_.birth as birth5_3_0_,
-        member0_.name as name6_3_0_,
-        member0_.password as password7_3_0_,
-        member0_.phone as phone8_3_0_ 
-    from
-        member member0_ 
-    where
-        member0_.id=?
-Hibernate: 
-    select
-        deliveryad0_.member_id as member_i5_1_0_,
-        deliveryad0_.id as id1_1_0_,
-        deliveryad0_.id as id1_1_1_,
-        deliveryad0_.delivery_city as delivery2_1_1_,
-        deliveryad0_.delivery_street as delivery3_1_1_,
-        deliveryad0_.delivery_zipcode as delivery4_1_1_ 
-    from
-        delivery_address deliveryad0_ 
-    where
-        deliveryad0_.member_id=?
-Hibernate: 
-    /* delete one-to-many row io.basquiat.model.embedded.Member.deliveryAddress */ update
-            delivery_address 
-        set
-            member_id=null 
-        where
-            member_id=? 
-            and id=?
-Hibernate: 
-    /* delete io.basquiat.model.embedded.DeliveryAddress */ delete 
+    /* SELECT
+        m.team 
+    FROM
+        Member m */ select
+            team1_.id as id1_1_,
+            team1_.name as name2_1_ 
         from
-            delivery_address 
+            basquiat_member member0_ 
+        inner join
+            basquiat_team team1_ 
+                on member0_.team_id=team1_.id
+Team(id=1, teamName=Basquiat Team)
+Hibernate: 
+    /* update
+        io.basquiat.jpql.Team */ update
+            basquiat_team 
+        set
+            name=? 
         where
             id=?
 ```
-좋은 예제는 아니지만 street프로퍼티에 setter를 설정해서 변경 감지로 업데이트 하거나 cascade와 orpahanRemoval 설정에 의해서 삭제도 가능하게 할 수 있다.       
+이 경우도 결국 엔티티를 반환하기에 영속성 컨텍스트에서 관리되고 변경 감지에 대해서 반응을 하게 된다.        
 
-또한 엔티티로 승격했기때문에
+여기까지가 가장 기본적인 조회 방식이다.      
 
-```
-DeliveryAddress selected = em.find(DeliveryAddress.class, 1L);
-```
-처럼 해당 테이블을 조회할 수도 있다.     
-
+다음 브랜치에서는 본격적인 페이징과 정렬, 조인등을 한번 알아보자.
 
 # At A Glance      
 
-개인적으로 이 부분은 참 쉬우면서도 어려운 부분이 아닌가 싶다. 그만큼 고민도 많이 해야하고 전략을 어떻게 가져가야하는지에 대한 부분도 가장 큰 거 같다.      
-
-많은 부분을 좀 생략하긴 했지만 적어도 어느 정도의 사용하는데에 단초를 제공하는데에는 부족하지 않다고 생각한다.     
-
-다음 브랜치에서는 JPQL과 관련된 부분을 진행할 예정이다.      
+그냥 지금까지 문법에 대해서 쭉 알아봤는데 간과하면 안되는 것은 결국 앞으로 할 내용들은 SQL에 대한 이해도가 어느 정도 있어야 한다.      
