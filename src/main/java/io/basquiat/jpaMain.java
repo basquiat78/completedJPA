@@ -1,5 +1,7 @@
 package io.basquiat;
 
+import java.util.List;
+
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
@@ -7,6 +9,7 @@ import javax.persistence.Persistence;
 import javax.persistence.TypedQuery;
 
 import io.basquiat.jpql.Member;
+import io.basquiat.jpql.MemberDTO;
 import io.basquiat.jpql.Team;
 
 /**
@@ -22,24 +25,24 @@ public class jpaMain {
         EntityTransaction tx = em.getTransaction();
         tx.begin();
         try {
+
         	Team myTeam = Team.builder().teamName("Default Team").build();
         	em.persist(myTeam);
         	
-        	// address는 그냥 비우자.
-        	Member member = Member.builder().id("basquiat")
-        									.name("Jean-Michel Basquiat")
-        									.age(28)
-        									.team(myTeam)
-        									.build();
+        	Member member = Member.builder().id("user_id")
+        			.name("basquiat")
+        			.age(33)
+        			.team(myTeam)
+        			.build();
         	em.persist(member);
+        	
         	em.flush();
         	em.clear();
         	
-        	TypedQuery<Team> selected = em.createQuery("SELECT m.team FROM Member m", Team.class);
-        	Team selectedTeam = selected.getSingleResult();
-        	selectedTeam.setTeamName("Basquiat Team");
-        	System.out.println(selectedTeam);
-			
+        	TypedQuery<Member> selected = em.createQuery("SELECT sub FROM (SELECT sm FROM Member sm) AS sub", Member.class);
+        	List<Member> members = selected.getResultList();
+        	System.out.println(members);
+        	
         	tx.commit();
         } catch(Exception e) {
         	e.printStackTrace();

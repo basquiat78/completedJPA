@@ -21,7 +21,7 @@ import lombok.ToString;
 @Table(name = "basquiat_member")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@ToString
+@ToString(exclude = "team")
 @DynamicUpdate
 public class Member {
 	
